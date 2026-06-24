@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WM Prognose Engine</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0b1220;
+    color: #e6e9f0;
+    padding-bottom: 40px;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #8b96ab; font-size: 14px; margin-bottom: 16px; }
+  .card {
+    background: #131c2e;
+    border: 1px solid #233047;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: #8b96ab; margin: 0 0 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  label { font-size: 12px; color: #8b96ab; display: block; margin-bottom: 4px; }
+  input, select {
+    width: 100%;
+    background: #0e1626;
+    border: 1px solid #2a3650;
+    color: #e6e9f0;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  button {
+    width: 100%;
+    cursor: pointer;
+    background: #2f6feb;
+    border: none;
+    color: white;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  button:active { background: #245bcc; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; }
+  .result-grid .box { background: #0e1626; border-radius: 10px; padding: 10px; }
+  .result-grid .pct { font-size: 22px; font-weight: 700; }
+  .result-grid .lbl { font-size: 11px; color: #8b96ab; text-transform: uppercase; }
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .tag-strong { background: #1b4d2e; color: #56e08a; }
+  .tag-good { background: #1b3d4d; color: #56c0e0; }
+  .tag-light { background: #3d3a1b; color: #e0d056; }
+  .tag-none { background: #3d1b1b; color: #e05656; }
+  .rec-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .rec-line { font-size: 13px; color: #c4cad6; margin: 2px 0; }
+  table { width: 100%; font-size: 13px; border-collapse: collapse; }
+  td, th { padding: 4px 6px; text-align: left; border-bottom: 1px solid #233047; }
+  th { color: #8b96ab; font-weight: 500; }
+  .score-pill { display: inline-block; background: #0e1626; border-radius: 8px; padding: 4px 8px; margin: 2px; font-size: 13px; }
+  .hidden { display: none; }
+  .section-title { font-size: 15px; font-weight: 700; margin: 18px 0 8px; }
+  .small { font-size: 12px; color: #8b96ab; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>⚽ WM Prognose Engine</h1>
+  <div class="sub">Eigenständige KI-Wahrscheinlichkeiten · Value Bets · Monte-Carlo-Simulation (läuft komplett lokal im Browser)</div>
+
+  <div class="card">
+    <h2>Teams &amp; Stärke</h2>
+    <div class="grid2">
+      <div>
+        <label>Heimteam</label>
+        <input id="homeTeam" value="Deutschland">
+      </div>
+      <div>
+        <label>Auswärtsteam</label>
+        <input id="awayTeam" value="Brasilien">
+      </div>
+    </div>
+    <div class="grid3">
+      <div>
+        <label>Angriff Heim</label>
+        <input id="homeAttack" type="number" step="0.01" value="1.25">
+      </div>
+      <div>
+        <label>Abwehr Heim</label>
+        <input id="homeDefence" type="number" step="0.01" value="0.95">
+      </div>
+      <div>
+        <label>Elo Heim</label>
+        <input id="homeElo" type="number" step="1" value="2050">
+      </div>
+      <div>
+        <label>Angriff Gast</label>
+        <input id="awayAttack" type="number" step="0.01" value="1.30">
+      </div>
+      <div>
+        <label>Abwehr Gast</label>
+        <input id="awayDefence" type="number" step="0.01" value="0.90">
+      </div>
+      <div>
+        <label>Elo Gast</label>
+        <input id="awayElo" type="number" step="1" value="2120">
+      </div>
+    </div>
+    <label>Spielort</label>
+    <select id="neutralVenue">
+      <option value="true" selected>Neutral (z. B. WM-Spielort)</option>
+      <option value="false">Heimvorteil aktiv</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <h2>Marktquoten (1X2 + Zusatzmärkte)</h2>
+    <div class="grid3">
+      <div>
+        <label>Heimsieg</label>
+        <input id="oddsHome" type="number" step="0.01" value="2.80">
+      </div>
+      <div>
+        <label>Unentschieden</label>
+        <input id="oddsDraw" type="number" step="0.01" value="3.30">
+      </div>
+      <div>
+        <label>Auswärtssieg</label>
+        <input id="oddsAway" type="number" step="0.01" value="2.50">
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <label>BTTS Ja</label>
+        <input id="oddsBtts" type="number" step="0.01" value="1.70">
+      </div>
+      <div>
+        <label>Über 2.5 Tore</label>
+        <input id="oddsOver25" type="number" step="0.01" value="1.90">
+      </div>
+    </div>
+  </div>
+
+  <button onclick="runPrediction()">Prognose berechnen</button>
+
+  <div id="output" class="hidden">
+
+    <div class="section-title">Ergebniswahrscheinlichkeiten</div>
+    <div class="card">
+      <div class="result-grid">
+        <div class="box"><div class="pct" id="pHome"></div><div class="lbl">Heimsieg</div></div>
+        <div class="box"><div class="pct" id="pDraw"></div><div class="lbl">Unentschieden</div></div>
+        <div class="box"><div class="pct" id="pAway"></div><div class="lbl">Auswärtssieg</div></div>
+      </div>
+      <p class="small" id="xgLine" style="margin-top:12px;"></p>
+      <p class="small" id="confLine"></p>
+    </div>
+
+    <div class="section-title">Top 10 exakte Ergebnisse</div>
+    <div class="card" id="scoresBox"></div>
+
+    <div class="section-title">Monte-Carlo-Simulation (50.000 Läufe)</div>
+    <div class="card" id="mcBox"></div>
+
+    <div class="section-title">Empfehlungs-Engine</div>
+    <div id="recsBox"></div>
+
+  </div>
+</div>
+
+<script>
+const MAX_GOALS = 9;
+const LEAGUE_AVG_GOALS = 1.35;
+
+function poissonPmf(k, lambda) {
+  return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k);
+}
+function factorial(n) {
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
+}
+
+function expectedGoals(homeAttack, homeDefence, awayAttack, awayDefence, homeAdvantage) {
+  const lambdaHome = Math.max(LEAGUE_AVG_GOALS * homeAttack * awayDefence * homeAdvantage, 0.05);
+  const lambdaAway = Math.max(LEAGUE_AVG_GOALS * awayAttack * homeDefence, 0.05);
+  return [lambdaHome, lambdaAway];
+}
+
+function dixonColesTau(x, y, lambdaHome, lambdaAway, rho) {
+  if (x === 0 && y === 0) return 1 - lambdaHome * lambdaAway * rho;
+  if (x === 0 && y === 1) return 1 + lambdaHome * rho;
+  if (x === 1 && y === 0) return 1 + lambdaAway * rho;
+  if (x === 1 && y === 1) return 1 - rho;
+  return 1.0;
+}
+
+function scoreMatrix(lambdaHome, lambdaAway, rho = -0.13) {
+  const n = MAX_GOALS + 1;
+  const homeProbs = [], awayProbs = [];
+  for (let i = 0; i < n; i++) {
+    homeProbs.push(poissonPmf(i, lambdaHome));
+    awayProbs.push(poissonPmf(i, lambdaAway));
+  }
+  const matrix = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const row = [];
+    for (let j = 0; j < n; j++) {
+      let p = homeProbs[i] * awayProbs[j];
+      if (i < 2 && j < 2) p *= dixonColesTau(i, j, lambdaHome, lambdaAway, rho);
+      row.push(p);
+      total += p;
+    }
+    matrix.push(row);
+  }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) matrix[i][j] /= total;
+  return matrix;
+}
+
+function outcomeProbabilities(matrix) {
+  let home = 0, draw = 0, away = 0;
+  const n = matrix.length;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    if (i > j) home += matrix[i][j];
+    else if (i === j) draw += matrix[i][j];
+    else away += matrix[i][j];
+  }
+  return { home_win: home, draw: draw, away_win: away };
+}
+
+function bttsProbability(matrix) {
+  let p = 0;
+  for (let i = 1; i < matrix.length; i++) for (let j = 1; j < matrix.length; j++) p += matrix[i][j];
+  return p;
+}
+
+function overUnder(matrix, line) {
+  let over = 0;
+  const n = matrix.length;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (i + j > line) over += matrix[i][j];
+  return { over, under: 1 - over };
+}
+
+function topScores(matrix, topN = 10) {
+  const flat = [];
+  const n = matrix.length;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) flat.push({ home: i, away: j, p: matrix[i][j] });
+  flat.sort((a, b) => b.p - a.p);
+  return flat.slice(0, topN);
+}
+
+// --- Elo ---
+function eloExpected(rH, rA, neutral) {
+  const hfa = neutral ? 0 : 60;
+  const diff = rH - rA + hfa;
+  return 1 / (1 + Math.pow(10, -diff / 400));
+}
+function eloToProbabilities(rH, rA, neutral) {
+  const expHome = eloExpected(rH, rA, neutral);
+  const diff = rH - rA + (neutral ? 0 : 60);
+  const drawPeak = 0.27, drawWidth = 600;
+  const drawProb = drawPeak * Math.exp(-(diff * diff) / (2 * drawWidth * drawWidth));
+  let home = expHome * (1 - drawProb);
+  let away = (1 - expHome) * (1 - drawProb);
+  const total = home + drawProb + away;
+  return { home_win: home / total, draw: drawProb / total, away_win: away / total };
+}
+
+// --- Ensemble ---
+function ensembleProbabilities(home, away, neutral) {
+  const [lambdaHome, lambdaAway] = expectedGoals(home.attack, home.defence, away.attack, away.defence, 1.10);
+  const matrix = scoreMatrix(lambdaHome, lambdaAway);
+  const poissonProbs = outcomeProbabilities(matrix);
+  const eloProbs = eloToProbabilities(home.elo, away.elo, neutral);
+
+  const weights = { poisson: 0.5, elo: 0.5 }; // ohne ML-Modelle: Poisson/DC + Elo gewichtet
+  const blended = {
+    home_win: weights.poisson * poissonProbs.home_win + weights.elo * eloProbs.home_win,
+    draw: weights.poisson * poissonProbs.draw + weights.elo * eloProbs.draw,
+    away_win: weights.poisson * poissonProbs.away_win + weights.elo * eloProbs.away_win,
+  };
+  const total = blended.home_win + blended.draw + blended.away_win;
+  blended.home_win /= total; blended.draw /= total; blended.away_win /= total;
+
+  return { probabilities: blended, lambdaHome, lambdaAway, matrix, poissonProbs, eloProbs };
+}
+
+function confidenceScore(probs, poissonProbs, eloProbs) {
+  const maxProb = Math.max(probs.home_win, probs.draw, probs.away_win);
+  const decisiveness = (maxProb - 1/3) / (1 - 1/3);
+  const topOutcome = Object.keys(probs).reduce((a, b) => probs[a] > probs[b] ? a : b);
+  const poissonTop = Object.keys(poissonProbs).reduce((a, b) => poissonProbs[a] > poissonProbs[b] ? a : b);
+  const eloTop = Object.keys(eloProbs).reduce((a, b) => eloProbs[a] > eloProbs[b] ? a : b);
+  const agreement = ((poissonTop === topOutcome ? 1 : 0) + (eloTop === topOutcome ? 1 : 0)) / 2;
+  const raw = 0.6 * decisiveness + 0.4 * agreement;
+  return Math.round(Math.max(0, Math.min(1, raw)) * 100);
+}
+
+// --- Monte Carlo ---
+function simulateMatch(matrix, nSim = 50000) {
+  const n = matrix.length;
+  const flat = [];
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) flat.push({ i, j, p: matrix[i][j] });
+  const cum = [];
+  let acc = 0;
+  for (const f of flat) { acc += f.p; cum.push(acc); }
+
+  let homeWins = 0, draws = 0, awayWins = 0, btts = 0, sumHome = 0, sumAway = 0;
+  for (let s = 0; s < nSim; s++) {
+    const r = Math.random();
+    let idx = cum.findIndex(c => r <= c);
+    if (idx === -1) idx = cum.length - 1;
+    const { i, j } = flat[idx];
+    sumHome += i; sumAway += j;
+    if (i > j) homeWins++; else if (i === j) draws++; else awayWins++;
+    if (i > 0 && j > 0) btts++;
+  }
+  return {
+    nSim,
+    homeWinPct: homeWins / nSim,
+    drawPct: draws / nSim,
+    awayWinPct: awayWins / nSim,
+    bttsPct: btts / nSim,
+    avgHomeGoals: sumHome / nSim,
+    avgAwayGoals: sumAway / nSim,
+  };
+}
+
+// --- Value Bets ---
+function evaluateValueBet(market, probability, marketOdds, kellyMultiplier = 0.25) {
+  probability = Math.min(Math.max(probability, 1e-6), 1 - 1e-6);
+  const fairOdds = 1 / probability;
+  const impliedProb = 1 / marketOdds;
+  const edgePct = (probability - impliedProb) / impliedProb * 100;
+  const ev = probability * marketOdds - 1;
+  const b = marketOdds - 1, q = 1 - probability;
+  const kellyFraction = b > 0 ? Math.max(0, ((b * probability - q) / b) * kellyMultiplier) : 0;
+
+  let valueClass = "Kein Value";
+  if (ev > 0) {
+    if (edgePct < 3) valueClass = "Leichter Value";
+    else if (edgePct < 8) valueClass = "Guter Value";
+    else valueClass = "Starker Value";
+  }
+
+  return {
+    market, probability, fairOdds, marketOdds,
+    edgePct: Math.round(edgePct * 100) / 100,
+    ev: Math.round(ev * 1000) / 1000,
+    kellyStakePct: Math.round(kellyFraction * 100 * 100) / 100,
+    valueClass,
+  };
+}
+
+function scanMarkets(probabilities, marketOdds) {
+  const results = [];
+  for (const market in probabilities) {
+    if (marketOdds[market] !== undefined && marketOdds[market] > 0) {
+      results.push(evaluateValueBet(market, probabilities[market], marketOdds[market]));
+    }
+  }
+  results.sort((a, b) => b.ev - a.ev);
+  return results;
+}
+
+function buildRecommendations(probabilities, marketOdds, confidence) {
+  const valueBets = scanMarkets(probabilities, marketOdds);
+  const positiveEv = valueBets.filter(v => v.ev > 0);
+
+  if (positiveEv.length === 0) {
+    return { message: "KEINE WETTE EMPFOHLEN", recommended: null, top3: [], safest: null, bestValue: null, underdog: null, notRecommended: valueBets };
+  }
+
+  const recommended = positiveEv[0];
+  const top3 = positiveEv.slice(0, 3);
+  const safeCandidates = positiveEv.filter(v => v.probability >= 0.6);
+  const safest = safeCandidates.length ? safeCandidates.reduce((a, b) => a.probability > b.probability ? a : b) : null;
+  const bestValue = positiveEv.reduce((a, b) => a.edgePct > b.edgePct ? a : b);
+  const underdogCandidates = positiveEv.filter(v => v.probability <= 0.35);
+  const underdog = underdogCandidates.length ? underdogCandidates.reduce((a, b) => a.ev > b.ev ? a : b) : null;
+  const notRecommended = valueBets.filter(v => v.ev <= 0);
+
+  return { message: null, recommended, top3, safest, bestValue, underdog, notRecommended, confidence };
+}
+
+const MARKET_LABELS = {
+  home_win: "Heimsieg", draw: "Unentschieden", away_win: "Auswärtssieg",
+  btts_yes: "Beide Teams treffen (Ja)", "over_2.5": "Über 2.5 Tore"
+};
+
+function tagClass(vc) {
+  if (vc === "Starker Value") return "tag-strong";
+  if (vc === "Guter Value") return "tag-good";
+  if (vc === "Leichter Value") return "tag-light";
+  return "tag-none";
+}
+
+function recHtml(title, rec, confidence) {
+  if (!rec) return `<div class="card"><h2>${title}</h2><div class="small">Keine passende Wette gefunden.</div></div>`;
+  return `<div class="card">
+    <h2>${title}</h2>
+    <span class="tag ${tagClass(rec.valueClass)}">${rec.valueClass}</span>
+    <div class="rec-title">${MARKET_LABELS[rec.market] || rec.market}</div>
+    <div class="rec-line">Wahrscheinlichkeit: ${(rec.probability*100).toFixed(1)}% · Faire Quote: ${rec.fairOdds.toFixed(2)} · Marktquote: ${rec.marketOdds.toFixed(2)}</div>
+    <div class="rec-line">Edge: ${rec.edgePct}% · Expected Value: ${rec.ev} · Kelly-Stake: ${rec.kellyStakePct}%</div>
+    <div class="rec-line">Konfidenzscore: ${confidence}/100</div>
+  </div>`;
+}
+
+function runPrediction() {
+  const home = {
+    attack: parseFloat(document.getElementById('homeAttack').value),
+    defence: parseFloat(document.getElementById('homeDefence').value),
+    elo: parseFloat(document.getElementById('homeElo').value),
+  };
+  const away = {
+    attack: parseFloat(document.getElementById('awayAttack').value),
+    defence: parseFloat(document.getElementById('awayDefence').value),
+    elo: parseFloat(document.getElementById('awayElo').value),
+  };
+  const neutral = document.getElementById('neutralVenue').value === 'true';
+  const homeTeamName = document.getElementById('homeTeam').value || "Heimteam";
+  const awayTeamName = document.getElementById('awayTeam').value || "Auswärtsteam";
+
+  const result = ensembleProbabilities(home, away, neutral);
+  const probs = result.probabilities;
+  const confidence = confidenceScore(probs, result.poissonProbs, result.eloProbs);
+  const mc = simulateMatch(result.matrix, 50000);
+  const scores = topScores(result.matrix, 10);
+  const btts = bttsProbability(result.matrix);
+  const ou25 = overUnder(result.matrix, 2.5);
+
+  const marketProbs = {
+    home_win: probs.home_win, draw: probs.draw, away_win: probs.away_win,
+    btts_yes: btts, "over_2.5": ou25.over,
+  };
+  const marketOdds = {
+    home_win: parseFloat(document.getElementById('oddsHome').value),
+    draw: parseFloat(document.getElementById('oddsDraw').value),
+    away_win: parseFloat(document.getElementById('oddsAway').value),
+    btts_yes: parseFloat(document.getElementById('oddsBtts').value),
+    "over_2.5": parseFloat(document.getElementById('oddsOver25').value),
+  };
+
+  const recs = buildRecommendations(marketProbs, marketOdds, confidence);
+
+  document.getElementById('pHome').textContent = (probs.home_win*100).toFixed(1) + "%";
+  document.getElementById('pDraw').textContent = (probs.draw*100).toFixed(1) + "%";
+  document.getElementById('pAway').textContent = (probs.away_win*100).toFixed(1) + "%";
+  document.getElementById('xgLine').textContent =
+    `Erwartete Tore: ${homeTeamName} ${result.lambdaHome.toFixed(2)} – ${result.lambdaAway.toFixed(2)} ${awayTeamName} · BTTS: ${(btts*100).toFixed(1)}% · Über 2.5: ${(ou25.over*100).toFixed(1)}%`;
+  document.getElementById('confLine').textContent = `Konfidenzscore: ${confidence}/100`;
+
+  document.getElementById('scoresBox').innerHTML = scores.map(s =>
+    `<span class="score-pill">${s.home}-${s.away} <b>${(s.p*100).toFixed(1)}%</b></span>`
+  ).join(' ');
+
+  document.getElementById('mcBox').innerHTML = `
+    <table>
+      <tr><th>Heimsieg</th><th>Unentschieden</th><th>Auswärtssieg</th><th>Ø Tore Heim</th><th>Ø Tore Gast</th></tr>
+      <tr>
+        <td>${(mc.homeWinPct*100).toFixed(1)}%</td>
+        <td>${(mc.drawPct*100).toFixed(1)}%</td>
+        <td>${(mc.awayWinPct*100).toFixed(1)}%</td>
+        <td>${mc.avgHomeGoals.toFixed(2)}</td>
+        <td>${mc.avgAwayGoals.toFixed(2)}</td>
+      </tr>
+    </table>`;
+
+  let recsHtml = '';
+  if (recs.message) {
+    recsHtml = `<div class="card"><strong>${recs.message}</strong></div>`;
+  } else {
+    recsHtml += recHtml("Empfohlener Tipp", recs.recommended, confidence);
+    recsHtml += recHtml("Sicherster Tipp", recs.safest, confidence);
+    recsHtml += recHtml("Beste Value Bet", recs.bestValue, confidence);
+    recsHtml += recHtml("Bester Außenseiter", recs.underdog, confidence);
+  }
+  document.getElementById('recsBox').innerHTML = recsHtml;
+
+  document.getElementById('output').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
