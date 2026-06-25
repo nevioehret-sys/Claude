@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WM Capital — Prognose Terminal</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    font-family: "Helvetica Neue", Arial, -apple-system, sans-serif;
+    background: #05070a;
+    color: #e9ebee;
+  }
+  .topbar {
+    background: #05070a;
+    border-bottom: 1px solid #1c2128;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark {
+    width: 28px; height: 28px;
+    background: #ffb81c;
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #05070a; font-size: 14px;
+  }
+  .brand .name { font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+  .brand .tag { font-size: 11px; color: #7a8290; letter-spacing: 0.08em; text-transform: uppercase; margin-left: 8px; }
+  .disclaimer-bar {
+    background: #11151b;
+    border-bottom: 1px solid #1c2128;
+    padding: 10px 20px;
+    font-size: 12px;
+    color: #9aa3b0;
+    line-height: 1.5;
+  }
+  .disclaimer-bar b { color: #ffb81c; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 18px 60px; }
+
+  .hero { margin-bottom: 28px; }
+  .hero h1 {
+    font-size: 26px; font-weight: 700; margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .hero p { color: #9aa3b0; font-size: 14px; margin: 0; max-width: 640px; }
+
+  .panel {
+    background: #0b0f15;
+    border: 1px solid #1c2128;
+    border-radius: 4px;
+    margin-bottom: 18px;
+  }
+  .panel-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid #1c2128;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-head h2 {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #7a8290; margin: 0;
+  }
+  .panel-body { padding: 18px; }
+
+  /* Match list */
+  .match-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid #161a21;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .match-row:last-child { border-bottom: none; }
+  .match-row:hover, .match-row.active { background: #11151b; }
+  .match-teams { font-size: 15px; font-weight: 600; }
+  .match-meta { font-size: 12px; color: #7a8290; margin-top: 2px; }
+  .status-pill {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 4px 9px; border-radius: 100px;
+  }
+  .status-confirmed { background: #0e2818; color: #46d17a; border: 1px solid #1c4d31; }
+  .status-pending { background: #2a2310; color: #ffb81c; border: 1px solid #4d3f17; }
+  .chev { color: #4a525e; font-size: 14px; }
+
+  /* Form grids */
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .form-grid.cols2 { grid-template-columns: repeat(2, 1fr); }
+  label {
+    display: block; font-size: 11px; color: #7a8290; text-transform: uppercase;
+    letter-spacing: 0.04em; margin-bottom: 5px;
+  }
+  input, select {
+    width: 100%; background: #11151b; border: 1px solid #262c35;
+    color: #e9ebee; border-radius: 3px; padding: 10px; font-size: 15px;
+  }
+  input:focus, select:focus { outline: none; border-color: #ffb81c; }
+
+  .btn {
+    background: #ffb81c; color: #05070a; border: none; font-weight: 700;
+    font-size: 14px; padding: 13px 20px; border-radius: 3px; cursor: pointer;
+    width: 100%; margin-top: 6px; letter-spacing: 0.02em;
+  }
+  .btn:active { background: #e0a516; }
+  .btn-ghost {
+    background: transparent; color: #9aa3b0; border: 1px solid #262c35;
+    font-size: 12px; padding: 8px 14px; border-radius: 3px; cursor: pointer;
+  }
+
+  /* Metrics */
+  .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #1c2128; border: 1px solid #1c2128; }
+  .metric-box { background: #0b0f15; padding: 16px; text-align: center; }
+  .metric-box .num { font-size: 26px; font-weight: 700; }
+  .metric-box .lbl { font-size: 11px; color: #7a8290; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+  .metric-box.home .num { color: #46d17a; }
+  .metric-box.away .num { color: #5b9bff; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: #7a8290; font-weight: 600; padding: 8px 4px; border-bottom: 1px solid #1c2128; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td { padding: 9px 4px; border-bottom: 1px solid #161a21; }
+
+  .reco-card {
+    border: 1px solid #1c2128; border-radius: 4px; padding: 16px; margin-bottom: 12px;
+    background: #0b0f15;
+  }
+  .reco-card .kicker { font-size: 11px; color: #7a8290; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .reco-card .market { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .value-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 100px; letter-spacing: 0.04em; margin-bottom: 10px;
+  }
+  .v-strong { background: #0e2818; color: #46d17a; }
+  .v-good   { background: #0e2333; color: #5b9bff; }
+  .v-light  { background: #2a2310; color: #ffb81c; }
+  .v-none   { background: #2a1212; color: #ff6b6b; }
+  .reco-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 13px; color: #c4cad6; }
+  .reco-stats div span { color: #7a8290; display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .method {
+    background: #11151b; border: 1px solid #1c2128; border-radius: 4px; padding: 16px;
+    font-size: 13px; line-height: 1.7; color: #c4cad6; white-space: pre-wrap; font-family: "SF Mono", Menlo, monospace;
+  }
+  .method b { color: #ffb81c; }
+
+  .pill-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+  .score-pill {
+    background: #11151b; border: 1px solid #1c2128; border-radius: 3px;
+    padding: 6px 10px; font-size: 13px; font-family: "SF Mono", Menlo, monospace;
+  }
+  .score-pill b { color: #ffb81c; }
+
+  .hidden { display: none; }
+  .small-note { font-size: 11px; color: #5a6270; margin-top: 6px; }
+  .back-link { font-size: 12px; color: #7a8290; cursor: pointer; margin-bottom: 14px; display: inline-block; }
+  .back-link:hover { color: #ffb81c; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="mark">WM</div>
+    <div class="name">WM CAPITAL</div>
+    <div class="tag">Quant Prognose Terminal</div>
+  </div>
+</div>
+<div class="disclaimer-bar">
+  <b>Wichtiger Hinweis:</b> Die Achtelfinal-Paarungen der WM 2026 stehen aktuell (Gruppenphase läuft noch) größtenteils noch nicht final fest, und Live-Wettquoten können hier nicht automatisch abgerufen werden. Trage die echten Quoten aus deiner Wett-App ein — alle Berechnungen unten laufen dann live und transparent mit deinen Werten.
+</div>
+
+<div class="wrap">
+
+  <!-- LIST VIEW -->
+  <div id="listView">
+    <div class="hero">
+      <h1>Spiel-Auswahl &amp; Modell-Eingabe</h1>
+      <p>Wähle ein Spiel, trage Teamstärke und Marktquoten ein. Das Modell kombiniert Poisson/Dixon-Coles und Elo zu kalibrierten Wahrscheinlichkeiten, scannt alle Märkte auf Value und zeigt dir jeden Rechenschritt.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Vorlagen — WM 2026 (Status siehe Tag)</h2>
+        <span class="btn-ghost" onclick="addCustomMatch()">+ Eigenes Spiel</span>
+      </div>
+      <div id="matchList"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div id="detailView" class="hidden">
+    <span class="back-link" onclick="showList()">&larr; Zurück zur Übersicht</span>
+
+    <div class="panel">
+      <div class="panel-head"><h2 id="detailTitle">Spiel</h2></div>
+      <div class="panel-body">
+        <div class="form-grid cols2">
+          <div>
+            <label>Heimteam</label>
+            <input id="homeTeam">
+          </div>
+          <div>
+            <label>Auswärtsteam</label>
+            <input id="awayTeam">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div><label>Angriff Heim (1.0 = Ø)</label><input id="homeAttack" type="number" step="0.01"></div>
+          <div><label>Abwehr Heim (1.0 = Ø)</label><input id="homeDefence" type="number" step="0.01"></div>
+          <div><label>Elo Heim</label><input id="homeElo" type="number" step="1"></div>
+          <div><label>Angriff Gast (1.0 = Ø)</label><input id="awayAttack" type="number" step="0.01"></div>
+          <div><label>Abwehr Gast (1.0 = Ø)</label><input id="awayDefence" type="number" step="0.01"></div>
+          <div><label>Elo Gast</label><input id="awayElo" type="number" step="1"></div>
+        </div>
+        <label style="margin-top:10px;">Spielort</label>
+        <select id="neutralVenue">
+          <option value="true" selected>Neutral (WM-Spielort)</option>
+          <option value="false">Heimvorteil aktiv</option>
+        </select>
+        <p class="small-note">Tipp: Angriff/Abwehr kannst du grob aus FIFA-Rang oder eigener Einschätzung ableiten (1.0 = Turnier-Durchschnitt, 1.3 = deutlich überdurchschnittlich, 0.8 = unterdurchschnittlich). Elo-Werte findest du auf eloratings.net.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Marktquoten (aus deiner Wett-App eintragen)</h2></div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <div><label>Heimsieg</label><input id="oddsHome" type="number" step="0.01"></div>
+          <div><label>Unentschieden</label><input id="oddsDraw" type="number" step="0.01"></div>
+          <div><label>Auswärtssieg</label><input id="oddsAway" type="number" step="0.01"></div>
+          <div><label>BTTS Ja</label><input id="oddsBtts" type="number" step="0.01"></div>
+          <div><label>Über 2.5 Tore</label><input id="oddsOver25" type="number" step="0.01"></div>
+        </div>
+        <button class="btn" onclick="runPrediction()">Modell berechnen</button>
+      </div>
+    </div>
+
+    <div id="output" class="hidden">
+
+      <div class="panel">
+        <div class="panel-head"><h2>Ergebniswahrscheinlichkeiten (Ensemble)</h2></div>
+        <div class="panel-body">
+          <div class="metric-row">
+            <div class="metric-box home"><div class="num" id="pHome"></div><div class="lbl" id="lblHome">Heimsieg</div></div>
+            <div class="metric-box"><div class="num" id="pDraw"></div><div class="lbl">Unentschieden</div></div>
+            <div class="metric-box away"><div class="num" id="pAway"></div><div class="lbl" id="lblAway">Auswärtssieg</div></div>
+          </div>
+          <p class="small-note" id="xgLine" style="margin-top:14px;"></p>
+          <p class="small-note" id="confLine"></p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Top 10 exakte Ergebnisse</h2></div>
+        <div class="panel-body"><div class="pill-strip" id="scoresBox"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Monte-Carlo-Simulation — 50.000 Läufe</h2></div>
+        <div class="panel-body"><div id="mcBox"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Empfehlungs-Engine</h2></div>
+        <div class="panel-body" id="recsBox"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Methodik — wie das Modell auf diese Zahlen kommt</h2></div>
+        <div class="panel-body"><div class="method" id="methodBox"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const MAX_GOALS = 9;
+const LEAGUE_AVG_GOALS = 1.35;
+
+// --- Vorlagen: Status "confirmed" nur wenn die Paarung laut Recherche feststeht,
+// sonst "pending" weil die Gruppenphase/Achtelfinal-Bracket noch nicht final ist.
+const TEMPLATES = [
+  { home: "England", away: "Kap Verde", status: "confirmed", meta: "Runde der 32 · Paarung bestätigt", homeAttack: 1.15, homeDefence: 0.90, homeElo: 2055, awayAttack: 0.75, awayDefence: 1.30, awayElo: 1620 },
+  { home: "Brasilien", away: "Sieger Gruppe F (TBD)", status: "pending", meta: "Runde der 32 · Gegner noch offen", homeAttack: 1.25, homeDefence: 0.95, homeElo: 1986, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 },
+  { home: "Argentinien", away: "Gegner TBD", status: "pending", meta: "Runde der 32 · Gegner noch offen", homeAttack: 1.30, homeDefence: 0.90, homeElo: 2128, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 },
+  { home: "Frankreich", away: "Gegner TBD", status: "pending", meta: "Runde der 32 · Gegner noch offen", homeAttack: 1.28, homeDefence: 0.92, homeElo: 2084, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 },
+];
+
+let activeMatch = null;
+
+function renderList() {
+  const box = document.getElementById('matchList');
+  box.innerHTML = TEMPLATES.map((m, i) => `
+    <div class="match-row" onclick="openMatch(${i})">
+      <div>
+        <div class="match-teams">${m.home} <span style="color:#5a6270;">vs</span> ${m.away}</div>
+        <div class="match-meta">${m.meta}</div>
+      </div>
+      <span class="status-pill ${m.status === 'confirmed' ? 'status-confirmed' : 'status-pending'}">${m.status === 'confirmed' ? 'Bestätigt' : 'Noch offen'}</span>
+      <span class="chev">›</span>
+    </div>
+  `).join('');
+}
+
+function addCustomMatch() {
+  TEMPLATES.push({ home: "Heimteam", away: "Auswärtsteam", status: "pending", meta: "Eigenes Spiel", homeAttack: 1.0, homeDefence: 1.0, homeElo: 1800, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 });
+  renderList();
+  openMatch(TEMPLATES.length - 1);
+}
+
+function openMatch(i) {
+  activeMatch = i;
+  const m = TEMPLATES[i];
+  document.getElementById('detailTitle').textContent = `${m.home} vs ${m.away}`;
+  document.getElementById('homeTeam').value = m.home;
+  document.getElementById('awayTeam').value = m.away;
+  document.getElementById('homeAttack').value = m.homeAttack;
+  document.getElementById('homeDefence').value = m.homeDefence;
+  document.getElementById('homeElo').value = m.homeElo;
+  document.getElementById('awayAttack').value = m.awayAttack;
+  document.getElementById('awayDefence').value = m.awayDefence;
+  document.getElementById('awayElo').value = m.awayElo;
+  document.getElementById('oddsHome').value = '';
+  document.getElementById('oddsDraw').value = '';
+  document.getElementById('oddsAway').value = '';
+  document.getElementById('oddsBtts').value = '';
+  document.getElementById('oddsOver25').value = '';
+  document.getElementById('output').classList.add('hidden');
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('detailView').classList.remove('hidden');
+}
+
+function showList() {
+  document.getElementById('listView').classList.remove('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+}
+
+// --- Engine (Poisson/Dixon-Coles + Elo Ensemble) ---
+function poissonPmf(k, lambda) { return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k); }
+function factorial(n) { let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+
+function expectedGoals(hA, hD, aA, aD, homeAdv) {
+  return [Math.max(LEAGUE_AVG_GOALS * hA * aD * homeAdv, 0.05), Math.max(LEAGUE_AVG_GOALS * aA * hD, 0.05)];
+}
+function dixonColesTau(x, y, lH, lA, rho) {
+  if (x === 0 && y === 0) return 1 - lH * lA * rho;
+  if (x === 0 && y === 1) return 1 + lH * rho;
+  if (x === 1 && y === 0) return 1 + lA * rho;
+  if (x === 1 && y === 1) return 1 - rho;
+  return 1.0;
+}
+function scoreMatrix(lH, lA, rho = -0.13) {
+  const n = MAX_GOALS + 1, hP = [], aP = [];
+  for (let i = 0; i < n; i++) { hP.push(poissonPmf(i, lH)); aP.push(poissonPmf(i, lA)); }
+  const matrix = []; let total = 0;
+  for (let i = 0; i < n; i++) {
+    const row = [];
+    for (let j = 0; j < n; j++) {
+      let p = hP[i] * aP[j];
+      if (i < 2 && j < 2) p *= dixonColesTau(i, j, lH, lA, rho);
+      row.push(p); total += p;
+    }
+    matrix.push(row);
+  }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) matrix[i][j] /= total;
+  return matrix;
+}
+function outcomeProbabilities(matrix) {
+  let home=0, draw=0, away=0, n=matrix.length;
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++) { if(i>j) home+=matrix[i][j]; else if(i===j) draw+=matrix[i][j]; else away+=matrix[i][j]; }
+  return { home_win: home, draw: draw, away_win: away };
+}
+function bttsProbability(matrix){ let p=0; for(let i=1;i<matrix.length;i++) for(let j=1;j<matrix.length;j++) p+=matrix[i][j]; return p; }
+function overUnder(matrix, line){ let over=0,n=matrix.length; for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(i+j>line) over+=matrix[i][j]; return {over, under:1-over}; }
+function topScores(matrix, topN=10){ const flat=[],n=matrix.length; for(let i=0;i<n;i++) for(let j=0;j<n;j++) flat.push({home:i,away:j,p:matrix[i][j]}); flat.sort((a,b)=>b.p-a.p); return flat.slice(0,topN); }
+
+function eloExpected(rH, rA, neutral){ const hfa = neutral?0:60; return 1/(1+Math.pow(10, -((rH-rA+hfa)/400))); }
+function eloToProbabilities(rH, rA, neutral){
+  const expHome = eloExpected(rH, rA, neutral);
+  const diff = rH - rA + (neutral?0:60);
+  const drawProb = 0.27 * Math.exp(-(diff*diff)/(2*600*600));
+  let home = expHome*(1-drawProb), away=(1-expHome)*(1-drawProb);
+  const total = home+drawProb+away;
+  return { home_win: home/total, draw: drawProb/total, away_win: away/total };
+}
+
+function ensembleProbabilities(home, away, neutral){
+  const [lH, lA] = expectedGoals(home.attack, home.defence, away.attack, away.defence, 1.10);
+  const matrix = scoreMatrix(lH, lA);
+  const poissonProbs = outcomeProbabilities(matrix);
+  const eloProbs = eloToProbabilities(home.elo, away.elo, neutral);
+  const blended = {
+    home_win: 0.5*poissonProbs.home_win + 0.5*eloProbs.home_win,
+    draw: 0.5*poissonProbs.draw + 0.5*eloProbs.draw,
+    away_win: 0.5*poissonProbs.away_win + 0.5*eloProbs.away_win,
+  };
+  const t = blended.home_win+blended.draw+blended.away_win;
+  blended.home_win/=t; blended.draw/=t; blended.away_win/=t;
+  return { probabilities: blended, lH, lA, matrix, poissonProbs, eloProbs };
+}
+
+function confidenceScore(probs, poissonProbs, eloProbs){
+  const maxProb = Math.max(probs.home_win, probs.draw, probs.away_win);
+  const decisiveness = (maxProb - 1/3)/(1-1/3);
+  const top = Object.keys(probs).reduce((a,b)=>probs[a]>probs[b]?a:b);
+  const pTop = Object.keys(poissonProbs).reduce((a,b)=>poissonProbs[a]>poissonProbs[b]?a:b);
+  const eTop = Object.keys(eloProbs).reduce((a,b)=>eloProbs[a]>eloProbs[b]?a:b);
+  const agreement = ((pTop===top?1:0)+(eTop===top?1:0))/2;
+  return Math.round(Math.max(0,Math.min(1, 0.6*decisiveness+0.4*agreement))*100);
+}
+
+function simulateMatch(matrix, nSim=50000){
+  const n = matrix.length, flat=[];
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) flat.push({i,j,p:matrix[i][j]});
+  const cum=[]; let acc=0; for(const f of flat){acc+=f.p; cum.push(acc);}
+  let hW=0,d=0,aW=0,btts=0,sH=0,sA=0;
+  for(let s=0;s<nSim;s++){
+    const r=Math.random(); let idx=cum.findIndex(c=>r<=c); if(idx===-1) idx=cum.length-1;
+    const {i,j}=flat[idx]; sH+=i; sA+=j;
+    if(i>j) hW++; else if(i===j) d++; else aW++;
+    if(i>0 && j>0) btts++;
+  }
+  return { nSim, homeWinPct:hW/nSim, drawPct:d/nSim, awayWinPct:aW/nSim, bttsPct:btts/nSim, avgHomeGoals:sH/nSim, avgAwayGoals:sA/nSim };
+}
+
+function evaluateValueBet(market, probability, marketOdds, kellyMultiplier=0.25){
+  probability = Math.min(Math.max(probability,1e-6),1-1e-6);
+  const fairOdds = 1/probability;
+  const impliedProb = 1/marketOdds;
+  const edgePct = (probability-impliedProb)/impliedProb*100;
+  const ev = probability*marketOdds-1;
+  const b=marketOdds-1, q=1-probability;
+  const kellyFraction = b>0 ? Math.max(0, ((b*probability-q)/b)*kellyMultiplier) : 0;
+  let valueClass = "Kein Value";
+  if (ev>0){ if(edgePct<3) valueClass="Leichter Value"; else if(edgePct<8) valueClass="Guter Value"; else valueClass="Starker Value"; }
+  return { market, probability, fairOdds, marketOdds, impliedProb, edgePct: Math.round(edgePct*100)/100, ev: Math.round(ev*1000)/1000, kellyStakePct: Math.round(kellyFraction*100*100)/100, valueClass };
+}
+function scanMarkets(probabilities, marketOdds){
+  const results=[];
+  for(const market in probabilities){ if(marketOdds[market]!==undefined && marketOdds[market]>0) results.push(evaluateValueBet(market, probabilities[market], marketOdds[market])); }
+  results.sort((a,b)=>b.ev-a.ev);
+  return results;
+}
+function buildRecommendations(probabilities, marketOdds, confidence){
+  const valueBets = scanMarkets(probabilities, marketOdds);
+  const positiveEv = valueBets.filter(v=>v.ev>0);
+  if(positiveEv.length===0) return { message:"KEINE WETTE EMPFOHLEN", recommended:null, safest:null, bestValue:null, underdog:null, notRecommended:valueBets };
+  const recommended = positiveEv[0];
+  const safeCandidates = positiveEv.filter(v=>v.probability>=0.6);
+  const safest = safeCandidates.length ? safeCandidates.reduce((a,b)=>a.probability>b.probability?a:b) : null;
+  const bestValue = positiveEv.reduce((a,b)=>a.edgePct>b.edgePct?a:b);
+  const underdogCandidates = positiveEv.filter(v=>v.probability<=0.35);
+  const underdog = underdogCandidates.length ? underdogCandidates.reduce((a,b)=>a.ev>b.ev?a:b) : null;
+  const notRecommended = valueBets.filter(v=>v.ev<=0);
+  return { message:null, recommended, safest, bestValue, underdog, notRecommended };
+}
+
+const MARKET_LABELS = { home_win:"Heimsieg", draw:"Unentschieden", away_win:"Auswärtssieg", btts_yes:"Beide Teams treffen (Ja)", "over_2.5":"Über 2.5 Tore" };
+function vClass(vc){ if(vc==="Starker Value") return "v-strong"; if(vc==="Guter Value") return "v-good"; if(vc==="Leichter Value") return "v-light"; return "v-none"; }
+
+function recCardHtml(title, rec){
+  if(!rec) return `<div class="reco-card"><div class="kicker">${title}</div><div class="small-note">Keine passende Wette gefunden.</div></div>`;
+  return `<div class="reco-card">
+    <div class="kicker">${title}</div>
+    <span class="value-tag ${vClass(rec.valueClass)}">${rec.valueClass}</span>
+    <div class="market">${MARKET_LABELS[rec.market] || rec.market}</div>
+    <div class="reco-stats">
+      <div><span>Wahrscheinlichkeit</span>${(rec.probability*100).toFixed(1)}%</div>
+      <div><span>Faire Quote</span>${rec.fairOdds.toFixed(2)}</div>
+      <div><span>Marktquote</span>${rec.marketOdds.toFixed(2)}</div>
+      <div><span>Edge</span>${rec.edgePct}%</div>
+      <div><span>Expected Value</span>${rec.ev}</div>
+      <div><span>Kelly-Stake</span>${rec.kellyStakePct}% des Bankrolls</div>
+    </div>
+  </div>`;
+}
+
+function runPrediction(){
+  const home = { attack: parseFloat(document.getElementById('homeAttack').value), defence: parseFloat(document.getElementById('homeDefence').value), elo: parseFloat(document.getElementById('homeElo').value) };
+  const away = { attack: parseFloat(document.getElementById('awayAttack').value), defence: parseFloat(document.getElementById('awayDefence').value), elo: parseFloat(document.getElementById('awayElo').value) };
+  const neutral = document.getElementById('neutralVenue').value === 'true';
+  const homeTeamName = document.getElementById('homeTeam').value || "Heimteam";
+  const awayTeamName = document.getElementById('awayTeam').value || "Auswärtsteam";
+  document.getElementById('lblHome').textContent = homeTeamName;
+  document.getElementById('lblAway').textContent = awayTeamName;
+
+  const result = ensembleProbabilities(home, away, neutral);
+  const probs = result.probabilities;
+  const confidence = confidenceScore(probs, result.poissonProbs, result.eloProbs);
+  const mc = simulateMatch(result.matrix, 50000);
+  const scores = topScores(result.matrix, 10);
+  const btts = bttsProbability(result.matrix);
+  const ou25 = overUnder(result.matrix, 2.5);
+
+  const marketProbs = { home_win: probs.home_win, draw: probs.draw, away_win: probs.away_win, btts_yes: btts, "over_2.5": ou25.over };
+  const marketOdds = {
+    home_win: parseFloat(document.getElementById('oddsHome').value),
+    draw: parseFloat(document.getElementById('oddsDraw').value),
+    away_win: parseFloat(document.getElementById('oddsAway').value),
+    btts_yes: parseFloat(document.getElementById('oddsBtts').value),
+    "over_2.5": parseFloat(document.getElementById('oddsOver25').value),
+  };
+  const recs = buildRecommendations(marketProbs, marketOdds, confidence);
+
+  document.getElementById('pHome').textContent = (probs.home_win*100).toFixed(1)+"%";
+  document.getElementById('pDraw').textContent = (probs.draw*100).toFixed(1)+"%";
+  document.getElementById('pAway').textContent = (probs.away_win*100).toFixed(1)+"%";
+  document.getElementById('xgLine').textContent = `Erwartete Tore: ${homeTeamName} ${result.lH.toFixed(2)} – ${result.lA.toFixed(2)} ${awayTeamName} · BTTS ${(btts*100).toFixed(1)}% · Über 2.5 Tore ${(ou25.over*100).toFixed(1)}%`;
+  document.getElementById('confLine').textContent = `Konfidenzscore: ${confidence}/100 (Übereinstimmung Poisson/Dixon-Coles vs. Elo-Modell)`;
+
+  document.getElementById('scoresBox').innerHTML = scores.map(s=>`<span class="score-pill">${s.home}-${s.away} <b>${(s.p*100).toFixed(1)}%</b></span>`).join('');
+
+  document.getElementById('mcBox').innerHTML = `
+    <table>
+      <tr><th>Heimsieg</th><th>Unentschieden</th><th>Auswärtssieg</th><th>Ø Tore Heim</th><th>Ø Tore Gast</th></tr>
+      <tr><td>${(mc.homeWinPct*100).toFixed(1)}%</td><td>${(mc.drawPct*100).toFixed(1)}%</td><td>${(mc.awayWinPct*100).toFixed(1)}%</td><td>${mc.avgHomeGoals.toFixed(2)}</td><td>${mc.avgAwayGoals.toFixed(2)}</td></tr>
+    </table>`;
+
+  let recsHtml = '';
+  if (recs.message) {
+    recsHtml = `<div class="reco-card"><strong style="color:#ff6b6b;">${recs.message}</strong><p class="small-note">Keine der eingetragenen Marktquoten bietet einen positiven Erwartungswert gegenüber dem Modell — bei diesen Quoten ist keine der Wetten statistisch vorteilhaft.</p></div>`;
+  } else {
+    recsHtml += recCardHtml("Empfohlener Tipp (höchster EV)", recs.recommended);
+    recsHtml += recCardHtml("Sicherster Tipp (höchste Wahrscheinlichkeit, positiver EV)", recs.safest);
+    recsHtml += recCardHtml("Beste Value Bet (höchster Edge)", recs.bestValue);
+    recsHtml += recCardHtml("Bester Außenseiter (Quote &gt; ~2.85, positiver EV)", recs.underdog);
+  }
+  document.getElementById('recsBox').innerHTML = recsHtml;
+
+  // Methodik-Text mit echten eingesetzten Zahlen
+  const rho = -0.13;
+  const method = `1) ERWARTETE TORE (Poisson)
+   λ_Heim = Ø-Turniertore(${LEAGUE_AVG_GOALS}) × Angriff_Heim(${home.attack}) × Abwehr_Gast(${away.defence}) × Heimvorteil(1.10)
+          = ${result.lH.toFixed(3)}
+   λ_Gast = Ø-Turniertore(${LEAGUE_AVG_GOALS}) × Angriff_Gast(${away.attack}) × Abwehr_Heim(${home.defence})
+          = ${result.lA.toFixed(3)}
+
+2) DIXON-COLES-KORREKTUR (ρ = ${rho})
+   Reines Poisson unterschätzt Unentschieden bei 0:0/1:0/0:1/1:1.
+   Diese vier Felder der Score-Matrix wurden mit τ(x,y,ρ) angepasst,
+   alle ${(MAX_GOALS+1)*(MAX_GOALS+1)} Feld-Wahrscheinlichkeiten neu normiert.
+   → Poisson/DC-Modell: Heimsieg ${(result.poissonProbs.home_win*100).toFixed(1)}% · Unentschieden ${(result.poissonProbs.draw*100).toFixed(1)}% · Auswärtssieg ${(result.poissonProbs.away_win*100).toFixed(1)}%
+
+3) ELO-MODELL
+   E_Heim = 1 / (1 + 10^(-(${home.elo} − ${away.elo} + ${neutral?0:60}) / 400)) = ${eloExpected(home.elo, away.elo, neutral).toFixed(3)}
+   Unentschieden-Korrektur über Elo-Differenz (Glockenkurve um Differenz 0).
+   → Elo-Modell: Heimsieg ${(result.eloProbs.home_win*100).toFixed(1)}% · Unentschieden ${(result.eloProbs.draw*100).toFixed(1)}% · Auswärtssieg ${(result.eloProbs.away_win*100).toFixed(1)}%
+
+4) ENSEMBLE (50% Poisson/DC + 50% Elo)
+   Heimsieg = 0.5 × ${(result.poissonProbs.home_win*100).toFixed(1)}% + 0.5 × ${(result.eloProbs.home_win*100).toFixed(1)}% = ${(probs.home_win*100).toFixed(1)}%
+   Unentschieden = ${(probs.draw*100).toFixed(1)}% · Auswärtssieg = ${(probs.away_win*100).toFixed(1)}%
+
+5) MONTE-CARLO-VALIDIERUNG (50.000 Stichproben aus der Score-Matrix)
+   Heimsieg ${(mc.homeWinPct*100).toFixed(1)}% · Unentschieden ${(mc.drawPct*100).toFixed(1)}% · Auswärtssieg ${(mc.awayWinPct*100).toFixed(1)}%
+   (Bestätigt die analytische Verteilung — Abweichung nur durch Zufallsstichprobe.)
+
+6) VALUE-BET-FORMELN (je Markt)
+   Faire Quote = 1 / Wahrscheinlichkeit
+   Edge % = (Wahrscheinlichkeit − 1/Marktquote) / (1/Marktquote) × 100
+   Expected Value = Wahrscheinlichkeit × Marktquote − 1
+   Kelly-Anteil = (b×p − q) / b , mit b = Marktquote − 1, q = 1 − p  (hier: Viertel-Kelly für Risikobegrenzung)
+${recs.recommended ? `\n   Beispiel "${MARKET_LABELS[recs.recommended.market]}":\n   Faire Quote = 1/${recs.recommended.probability.toFixed(3)} = ${recs.recommended.fairOdds.toFixed(2)}\n   Edge = (${recs.recommended.probability.toFixed(3)} − ${(1/recs.recommended.marketOdds).toFixed(3)}) / ${(1/recs.recommended.marketOdds).toFixed(3)} × 100 = ${recs.recommended.edgePct}%\n   EV = ${recs.recommended.probability.toFixed(3)} × ${recs.recommended.marketOdds.toFixed(2)} − 1 = ${recs.recommended.ev}` : ''}`;
+
+  document.getElementById('methodBox').textContent = method;
+  document.getElementById('output').classList.remove('hidden');
+}
+
+renderList();
+</script>
+</body>
+</html>
