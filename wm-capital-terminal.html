@@ -69,35 +69,64 @@
   }
   .panel-body { padding: 18px; }
 
-  /* Match list */
-  .match-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 18px;
-    border-bottom: 1px solid #161a21;
+  /* Match list — Oddify-style prediction cards */
+  #matchList { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .match-card {
+    background: linear-gradient(180deg, #11151b 0%, #0c1016 100%);
+    border: 1px solid #1c2128;
+    border-radius: 14px;
+    padding: 16px;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: border-color 0.15s, transform 0.1s;
   }
-  .match-row:last-child { border-bottom: none; }
-  .match-row:hover, .match-row.active { background: #11151b; }
-  .match-teams { font-size: 15px; font-weight: 600; }
-  .match-meta { font-size: 12px; color: #7a8290; margin-top: 2px; }
-  .match-pick { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-  .pick-score {
-    background: #1a1206; color: #ffb81c; border: 1px solid #4d3f17;
-    font-family: "SF Mono", Menlo, monospace; font-weight: 700; font-size: 13px;
-    padding: 3px 9px; border-radius: 3px;
-  }
-  .pick-tip { font-size: 13px; font-weight: 600; color: #e9ebee; }
-  .pick-conf { font-size: 11px; color: #7a8290; }
+  .match-card:hover, .match-card:active { border-color: #ffb81c; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-meta { font-size: 11px; color: #7a8290; }
   .status-pill {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.05em; padding: 4px 9px; border-radius: 100px;
   }
   .status-confirmed { background: #0e2818; color: #46d17a; border: 1px solid #1c4d31; }
   .status-pending { background: #2a2310; color: #ffb81c; border: 1px solid #4d3f17; }
+
+  .card-matchup { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+  .team-block { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .team-block.left { align-items: flex-start; flex-direction: row; }
+  .team-block.right { align-items: flex-end; flex-direction: row-reverse; }
+  .team-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: #1a1f28; border: 1px solid #2a3140;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: #ffb81c;
+  }
+  .team-name { font-size: 13px; font-weight: 700; color: #e9ebee; line-height: 1.25; }
+
+  .score-center { text-align: center; }
+  .score-display {
+    font-family: "SF Mono", Menlo, monospace; font-weight: 800; font-size: 26px;
+    color: #ffb81c; letter-spacing: 0.02em; line-height: 1;
+  }
+  .score-vs { font-size: 10px; color: #5a6270; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+  .card-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1c2128; }
+  .ai-pick { display: flex; align-items: center; gap: 8px; }
+  .ai-badge {
+    background: #1a1206; color: #ffb81c; border: 1px solid #4d3f17;
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 3px 7px; border-radius: 4px;
+  }
+  .pick-tip { font-size: 12.5px; font-weight: 600; color: #c4cad6; }
+  .conf-ring {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #05070a;
+    background: conic-gradient(#ffb81c calc(var(--c) * 1%), #1c2128 0);
+    flex-shrink: 0;
+  }
+  .conf-ring span {
+    width: 28px; height: 28px; border-radius: 50%; background: #0c1016;
+    color: #ffb81c; display: flex; align-items: center; justify-content: center; font-size: 10px;
+  }
   .chev { color: #4a525e; font-size: 14px; }
 
   /* Form grids */
@@ -325,7 +354,7 @@ const TEMPLATES = [
 ].map(m => ({
   ...m,
   status: m.verified ? "confirmed" : "pending",
-  meta: `Gruppenphase, letzter Spieltag · ${m.date}.2026 · Elo ${m.verified ? "verifiziert" : "geschätzt"}`,
+  meta: `Gruppenphase, letzter Spieltag · ${m.date}2026 · Elo ${m.verified ? "verifiziert" : "geschätzt"}`,
   homeAttack: Math.round(eloToAttack(m.homeElo) * 100) / 100,
   homeDefence: Math.round(eloToDefence(m.homeElo) * 100) / 100,
   awayAttack: Math.round(eloToAttack(m.awayElo) * 100) / 100,
@@ -341,12 +370,30 @@ function quickPredict(m) {
   const result = ensembleProbabilities(home, away, true);
   const probs = result.probabilities;
   const conf = confidenceScore(probs, result.poissonProbs, result.eloProbs);
-  const top = topScores(result.matrix, 1)[0];
   const outcome = probs.home_win >= probs.draw && probs.home_win >= probs.away_win ? 'home'
     : probs.draw >= probs.away_win ? 'draw' : 'away';
   const pickLabel = outcome === 'home' ? `Sieg ${m.home}` : outcome === 'draw' ? 'Unentschieden' : `Sieg ${m.away}`;
   const pickPct = outcome === 'home' ? probs.home_win : outcome === 'draw' ? probs.draw : probs.away_win;
-  return { scoreline: `${top.home}:${top.away}`, pickLabel, pickPct, conf };
+
+  // Wahrscheinlichste Einzel-Ergebnis-Kombination, die zum Sieger-Tipp passt
+  // (verhindert, dass die global wahrscheinlichste Zelle 1:1 den Tipp widerspricht)
+  const n = result.matrix.length;
+  let best = { home: 0, away: 0, p: -1 };
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const matches = outcome === 'home' ? i > j : outcome === 'away' ? i < j : i === j;
+      if (matches && result.matrix[i][j] > best.p) best = { home: i, away: j, p: result.matrix[i][j] };
+    }
+  }
+  return {
+    scoreline: `${best.home}:${best.away}`,
+    homeGoals: best.home, awayGoals: best.away,
+    pickLabel, pickPct, conf,
+  };
+}
+
+function initials(name) {
+  return name.split(/[\s-]+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 }
 
 function renderList() {
@@ -354,18 +401,33 @@ function renderList() {
   box.innerHTML = TEMPLATES.map((m, i) => {
     const q = quickPredict(m);
     return `
-    <div class="match-row" onclick="openMatch(${i})">
-      <div>
-        <div class="match-teams">${m.home} <span style="color:#5a6270;">vs</span> ${m.away}</div>
-        <div class="match-meta">${m.meta}</div>
-        <div class="match-pick">
-          <span class="pick-score">${q.scoreline}</span>
-          <span class="pick-tip">${q.pickLabel} · ${(q.pickPct*100).toFixed(0)}%</span>
-          <span class="pick-conf">Konfidenz ${q.conf}/100</span>
+    <div class="match-card" onclick="openMatch(${i})">
+      <div class="card-top">
+        <span class="card-meta">${m.meta}</span>
+        <span class="status-pill ${m.status === 'confirmed' ? 'status-confirmed' : 'status-pending'}">${m.status === 'confirmed' ? 'Elo verifiziert' : 'Elo geschätzt'}</span>
+      </div>
+      <div class="card-matchup">
+        <div class="team-block left">
+          <div class="team-avatar">${initials(m.home)}</div>
+          <div class="team-name">${m.home}</div>
+        </div>
+        <div class="score-center">
+          <div class="score-display">${q.homeGoals} : ${q.awayGoals}</div>
+          <div class="score-vs">KI-Prognose</div>
+        </div>
+        <div class="team-block right">
+          <div class="team-avatar">${initials(m.away)}</div>
+          <div class="team-name">${m.away}</div>
         </div>
       </div>
-      <span class="status-pill ${m.status === 'confirmed' ? 'status-confirmed' : 'status-pending'}">${m.status === 'confirmed' ? 'Elo verifiziert' : 'Elo geschätzt'}</span>
-      <span class="chev">›</span>
+      <div class="card-bottom">
+        <div class="ai-pick">
+          <span class="ai-badge">AI Pick</span>
+          <span class="pick-tip">${q.pickLabel} · ${(q.pickPct*100).toFixed(0)}%</span>
+        </div>
+        <div class="conf-ring" style="--c:${q.conf}"><span>${q.conf}</span></div>
+      </div>
+      <div style="text-align:right; margin-top:6px;"><span class="chev">Details ›</span></div>
     </div>
   `;
   }).join('');
