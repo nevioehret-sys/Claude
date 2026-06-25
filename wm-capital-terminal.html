@@ -84,6 +84,14 @@
   .match-row:hover, .match-row.active { background: #11151b; }
   .match-teams { font-size: 15px; font-weight: 600; }
   .match-meta { font-size: 12px; color: #7a8290; margin-top: 2px; }
+  .match-pick { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .pick-score {
+    background: #1a1206; color: #ffb81c; border: 1px solid #4d3f17;
+    font-family: "SF Mono", Menlo, monospace; font-weight: 700; font-size: 13px;
+    padding: 3px 9px; border-radius: 3px;
+  }
+  .pick-tip { font-size: 13px; font-weight: 600; color: #e9ebee; }
+  .pick-conf { font-size: 11px; color: #7a8290; }
   .status-pill {
     font-size: 10px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.05em; padding: 4px 9px; border-radius: 100px;
@@ -326,18 +334,41 @@ const TEMPLATES = [
 
 let activeMatch = null;
 
+// Sofort-Prognose pro Spiel für die Feed-Ansicht (wie bei Oddify/ScoreGPT: Tipp direkt in der Liste sichtbar)
+function quickPredict(m) {
+  const home = { attack: m.homeAttack, defence: m.homeDefence, elo: m.homeElo };
+  const away = { attack: m.awayAttack, defence: m.awayDefence, elo: m.awayElo };
+  const result = ensembleProbabilities(home, away, true);
+  const probs = result.probabilities;
+  const conf = confidenceScore(probs, result.poissonProbs, result.eloProbs);
+  const top = topScores(result.matrix, 1)[0];
+  const outcome = probs.home_win >= probs.draw && probs.home_win >= probs.away_win ? 'home'
+    : probs.draw >= probs.away_win ? 'draw' : 'away';
+  const pickLabel = outcome === 'home' ? `Sieg ${m.home}` : outcome === 'draw' ? 'Unentschieden' : `Sieg ${m.away}`;
+  const pickPct = outcome === 'home' ? probs.home_win : outcome === 'draw' ? probs.draw : probs.away_win;
+  return { scoreline: `${top.home}:${top.away}`, pickLabel, pickPct, conf };
+}
+
 function renderList() {
   const box = document.getElementById('matchList');
-  box.innerHTML = TEMPLATES.map((m, i) => `
+  box.innerHTML = TEMPLATES.map((m, i) => {
+    const q = quickPredict(m);
+    return `
     <div class="match-row" onclick="openMatch(${i})">
       <div>
         <div class="match-teams">${m.home} <span style="color:#5a6270;">vs</span> ${m.away}</div>
         <div class="match-meta">${m.meta}</div>
+        <div class="match-pick">
+          <span class="pick-score">${q.scoreline}</span>
+          <span class="pick-tip">${q.pickLabel} · ${(q.pickPct*100).toFixed(0)}%</span>
+          <span class="pick-conf">Konfidenz ${q.conf}/100</span>
+        </div>
       </div>
       <span class="status-pill ${m.status === 'confirmed' ? 'status-confirmed' : 'status-pending'}">${m.status === 'confirmed' ? 'Elo verifiziert' : 'Elo geschätzt'}</span>
       <span class="chev">›</span>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function addCustomMatch() {
