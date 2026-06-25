@@ -174,7 +174,7 @@
   </div>
 </div>
 <div class="disclaimer-bar">
-  <b>Wichtiger Hinweis:</b> Die Achtelfinal-Paarungen der WM 2026 stehen aktuell (Gruppenphase läuft noch) größtenteils noch nicht final fest, und Live-Wettquoten können hier nicht automatisch abgerufen werden. Trage die echten Quoten aus deiner Wett-App ein — alle Berechnungen unten laufen dann live und transparent mit deinen Werten.
+  <b>Wichtiger Hinweis:</b> Unten stehen die echten, bestätigten Spiele der letzten Gruppenspieltage (25.–27. Juni 2026, recherchiert über ESPN/Yahoo Sports). Elo-Werte sind bei "Elo verifiziert" direkt von eloratings.net bestätigt, bei "Elo geschätzt" eine grobe Einordnung — vor echtem Einsatz selbst gegenchecken. Live-Wettquoten kann ich nicht automatisch abrufen: trage die echten Quoten aus deiner Wett-App ein, dann läuft die Berechnung live und transparent mit deinen Werten.
 </div>
 
 <div class="wrap">
@@ -287,14 +287,42 @@
 const MAX_GOALS = 9;
 const LEAGUE_AVG_GOALS = 1.35;
 
-// --- Vorlagen: Status "confirmed" nur wenn die Paarung laut Recherche feststeht,
-// sonst "pending" weil die Gruppenphase/Achtelfinal-Bracket noch nicht final ist.
+// --- Elo -> Angriff/Abwehr Umrechnung (Heuristik, Baseline 1800 = Turnier-Durchschnitt) ---
+function eloToAttack(elo) { return Math.min(1.45, Math.max(0.65, 1 + (elo - 1800) / 1000)); }
+function eloToDefence(elo) { return Math.min(1.35, Math.max(0.70, 1 - (elo - 1800) / 1600)); }
+
+// --- Vorlagen: echte, bestätigte Gruppenphasen-Spiele der letzten Tage vor der K.o.-Runde
+// (recherchiert 24.06.2026, Quellen: ESPN/Yahoo Sports Spielplan, eloratings.net).
+// elo_verified=true: Wert direkt von eloratings.net bestätigt. elo_verified=false: grobe Schätzung
+// nach Teamstärke-Einordnung, da nicht einzeln verifizierbar -- bitte vor echtem Einsatz selbst prüfen.
 const TEMPLATES = [
-  { home: "England", away: "Kap Verde", status: "confirmed", meta: "Runde der 32 · Paarung bestätigt", homeAttack: 1.15, homeDefence: 0.90, homeElo: 2055, awayAttack: 0.75, awayDefence: 1.30, awayElo: 1620 },
-  { home: "Brasilien", away: "Sieger Gruppe F (TBD)", status: "pending", meta: "Runde der 32 · Gegner noch offen", homeAttack: 1.25, homeDefence: 0.95, homeElo: 1986, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 },
-  { home: "Argentinien", away: "Gegner TBD", status: "pending", meta: "Runde der 32 · Gegner noch offen", homeAttack: 1.30, homeDefence: 0.90, homeElo: 2128, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 },
-  { home: "Frankreich", away: "Gegner TBD", status: "pending", meta: "Runde der 32 · Gegner noch offen", homeAttack: 1.28, homeDefence: 0.92, homeElo: 2084, awayAttack: 1.0, awayDefence: 1.0, awayElo: 1800 },
-];
+  { home: "Ecuador", away: "Deutschland", date: "25.06.", homeElo: 1790, awayElo: 2010, verified: false },
+  { home: "Curaçao", away: "Elfenbeinküste", date: "25.06.", homeElo: 1520, awayElo: 1760, verified: false },
+  { home: "Türkiye", away: "USA", date: "25.06.", homeElo: 1820, awayElo: 1780, verified: false },
+  { home: "Paraguay", away: "Australien", date: "25.06.", homeElo: 1710, awayElo: 1700, verified: false },
+  { home: "Japan", away: "Schweden", date: "25.06.", homeElo: 1830, awayElo: 1760, verified: false },
+  { home: "Tunesien", away: "Niederlande", date: "25.06.", homeElo: 1700, awayElo: 1972, verified: true },
+  { home: "Norwegen", away: "Frankreich", date: "26.06.", homeElo: 1790, awayElo: 2084, verified: true },
+  { home: "Senegal", away: "Irak", date: "26.06.", homeElo: 1800, awayElo: 1650, verified: false },
+  { home: "Kap Verde", away: "Saudi-Arabien", date: "26.06.", homeElo: 1620, awayElo: 1660, verified: false },
+  { home: "Uruguay", away: "Spanien", date: "26.06.", homeElo: 1910, awayElo: 2129, verified: true },
+  { home: "Ägypten", away: "Iran", date: "26.06.", homeElo: 1710, awayElo: 1760, verified: false },
+  { home: "Neuseeland", away: "Belgien", date: "26.06.", homeElo: 1500, awayElo: 1910, verified: false },
+  { home: "Panama", away: "England", date: "27.06.", homeElo: 1660, awayElo: 2055, verified: true },
+  { home: "Kroatien", away: "Ghana", date: "27.06.", homeElo: 1900, awayElo: 1710, verified: false },
+  { home: "Kolumbien", away: "Portugal", date: "27.06.", homeElo: 1998, awayElo: 1980, verified: true },
+  { home: "DR Kongo", away: "Usbekistan", date: "27.06.", homeElo: 1610, awayElo: 1610, verified: false },
+  { home: "Algerien", away: "Österreich", date: "27.06.", homeElo: 1760, awayElo: 1810, verified: false },
+  { home: "Jordanien", away: "Argentinien", date: "27.06.", homeElo: 1610, awayElo: 2128, verified: true },
+].map(m => ({
+  ...m,
+  status: m.verified ? "confirmed" : "pending",
+  meta: `Gruppenphase, letzter Spieltag · ${m.date}.2026 · Elo ${m.verified ? "verifiziert" : "geschätzt"}`,
+  homeAttack: Math.round(eloToAttack(m.homeElo) * 100) / 100,
+  homeDefence: Math.round(eloToDefence(m.homeElo) * 100) / 100,
+  awayAttack: Math.round(eloToAttack(m.awayElo) * 100) / 100,
+  awayDefence: Math.round(eloToDefence(m.awayElo) * 100) / 100,
+}));
 
 let activeMatch = null;
 
@@ -306,7 +334,7 @@ function renderList() {
         <div class="match-teams">${m.home} <span style="color:#5a6270;">vs</span> ${m.away}</div>
         <div class="match-meta">${m.meta}</div>
       </div>
-      <span class="status-pill ${m.status === 'confirmed' ? 'status-confirmed' : 'status-pending'}">${m.status === 'confirmed' ? 'Bestätigt' : 'Noch offen'}</span>
+      <span class="status-pill ${m.status === 'confirmed' ? 'status-confirmed' : 'status-pending'}">${m.status === 'confirmed' ? 'Elo verifiziert' : 'Elo geschätzt'}</span>
       <span class="chev">›</span>
     </div>
   `).join('');
