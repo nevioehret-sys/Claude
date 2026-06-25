@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioLearn – Genetik KA 2</title>
+<style>
+  :root{
+    --bg:#0f1320; --card:#1a2036; --card2:#222b47; --accent:#7c5cff; --accent2:#3ddc97;
+    --text:#eef0fb; --muted:#9aa3c7; --danger:#ff6b6b; --warn:#ffc857;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',system-ui,Roboto,Arial,sans-serif;background:linear-gradient(160deg,#0f1320,#161c33);color:var(--text);min-height:100vh;}
+  header{padding:24px 20px 10px;text-align:center;}
+  header h1{margin:0;font-size:1.6rem;}
+  header p{color:var(--muted);margin:6px 0 0;font-size:.9rem;}
+  #app{max-width:1000px;margin:0 auto;padding:10px 16px 60px;}
+
+  .progressbar{height:8px;background:var(--card2);border-radius:6px;overflow:hidden;margin:14px 0 22px;}
+  .progressbar div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .4s;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+  .topic-card{background:var(--card);border-radius:16px;padding:18px;cursor:pointer;border:1px solid #2a3358;transition:transform .15s,border-color .15s;position:relative;overflow:hidden;}
+  .topic-card:hover{transform:translateY(-3px);border-color:var(--accent);}
+  .topic-card .num{font-size:.75rem;color:var(--accent2);font-weight:700;letter-spacing:.06em;}
+  .topic-card h3{margin:6px 0 8px;font-size:1.05rem;}
+  .topic-card p{color:var(--muted);font-size:.83rem;margin:0;line-height:1.4;}
+  .topic-card .mastery{margin-top:12px;height:6px;background:#2a3358;border-radius:4px;overflow:hidden;}
+  .topic-card .mastery div{height:100%;background:var(--accent2);}
+  .tag{display:inline-block;font-size:.68rem;background:#2a3358;color:var(--muted);padding:2px 8px;border-radius:20px;margin-top:10px;}
+
+  .btn{display:inline-block;border:none;border-radius:10px;padding:10px 16px;font-size:.9rem;cursor:pointer;font-weight:600;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-ghost{background:transparent;border:1px solid #3a4470;color:var(--text);}
+  .btn-green{background:var(--accent2);color:#06231a;}
+  .btn-red{background:var(--danger);color:#2a0606;}
+  .btn:active{transform:scale(.97);}
+  .backbtn{margin-bottom:14px;}
+
+  .tabs{display:flex;gap:8px;margin:18px 0;flex-wrap:wrap;}
+  .tabs button{background:var(--card2);border:1px solid #2a3358;color:var(--muted);padding:8px 14px;border-radius:10px;font-size:.85rem;cursor:pointer;}
+  .tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .note-section{background:var(--card);border-radius:14px;padding:18px 20px;margin-bottom:14px;border-left:4px solid var(--accent);}
+  .note-section h4{margin:0 0 10px;color:var(--accent2);font-size:1rem;}
+  .note-section ul{margin:0;padding-left:20px;}
+  .note-section li{margin-bottom:6px;line-height:1.45;font-size:.92rem;}
+  .note-section li::marker{color:var(--accent);}
+  .note-section .sub{margin-left:14px;color:var(--muted);}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .pill{background:#2a3358;border-radius:8px;padding:6px 10px;font-size:.82rem;}
+  .pill b{color:var(--accent2);}
+  .merksatz{background:#26204a;border:1px dashed var(--accent);border-radius:12px;padding:12px 14px;font-size:.85rem;margin-top:10px;color:#cfc4ff;}
+
+  .video-box{background:var(--card);border-radius:14px;padding:20px;text-align:center;}
+  .video-box .yticon{font-size:2.4rem;}
+  .video-box a{text-decoration:none;}
+
+  .flash-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .flashcard{width:100%;max-width:520px;min-height:220px;background:var(--card);border-radius:18px;padding:24px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:1.05rem;cursor:pointer;perspective:1000px;border:1px solid #2a3358;position:relative;}
+  .flashcard .label{position:absolute;top:12px;left:16px;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .flash-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .flash-meta{color:var(--muted);font-size:.85rem;}
+  .done-screen{text-align:center;padding:40px 10px;}
+  .done-screen .big{font-size:2.4rem;}
+
+  footer{text-align:center;color:var(--muted);font-size:.75rem;padding:20px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧬 BioLearn</h1>
+  <p>Genetik – KA 2 · DNA, Replikation, Proteinbiosynthese & Mutationen</p>
+</header>
+<div id="app"></div>
+<footer>Erstellt aus deinem Lernzettel · Lernfortschritt wird lokal gespeichert</footer>
+
+<script>
+const TOPICS = [
+{
+  id:"dna",
+  title:"DNA als Erbgut",
+  desc:"Bau der DNA, Nukleotide, Basenpaarung, Doppelhelix",
+  tag:"Grundlagen",
+  sections:[
+    {h:"Was ist die DNA?",items:[
+      "DNA = Desoxyribonukleinsäure, enthält die Erbinformation eines Lebewesens.",
+      "Die Abfolge der Basen speichert bestimmte Informationen.",
+      "Ein <b>Gen</b> ist ein DNA-Abschnitt, der für ein Protein/eine RNA codiert (ca. 100–10.000 Basenpaare).",
+      "Die Erbsubstanz muss kopierbar, veränderbar, stabil und ablesbar sein und Infos speichern können (→ vermehrbar, Mutationen, um Merkmale auszulösen)."
+    ]},
+    {h:"Bau eines Nukleotids",items:[
+      "Ein Nukleotid besteht aus: <b>Phosphatrest + Desoxyribose (Zucker) + Base</b>.",
+      "Zucker + Base ohne Phosphat = <b>Nukleosid</b>.",
+      "Die Nukleotide verbinden sich über das <b>Zucker-Phosphat-Rückgrat</b> zu einem Strang (5'-Ende ↔ 3'-Ende).",
+      "Zwei Stränge werden durch <b>Wasserstoffbrücken</b> zwischen den Basen zusammengehalten → Doppelhelix."
+    ]},
+    {h:"Komplementäre Basenpaarung",items:[
+      "<b>Adenin (A) – Thymin (T)</b>: 2 Wasserstoffbrücken.",
+      "<b>Guanin (G) – Cytosin (C)</b>: 3 Wasserstoffbrücken.",
+      "Bei RNA: statt Thymin → <b>Uracil (U)</b>.",
+      "Die Gegenstränge verlaufen <b>antiparallel</b> (5'→3' gegen 3'→5')."
+    ]}
+  ],
+  merksatz:"Merksatz: 'A-T leicht (2 Brücken), G-C fest (3 Brücken)'",
+  videoQuery:"DNA Aufbau Nukleotide musstewissen Biologie",
+  cards:[
+    {q:"Woraus besteht ein Nukleotid?",a:"Phosphatrest + Desoxyribose (Zucker) + Base"},
+    {q:"Wie viele Wasserstoffbrücken bilden A–T?",a:"2 Wasserstoffbrücken"},
+    {q:"Wie viele Wasserstoffbrücken bilden G–C?",a:"3 Wasserstoffbrücken"},
+    {q:"Welche Base ersetzt Thymin in der RNA?",a:"Uracil (U)"},
+    {q:"Wie verlaufen die zwei DNA-Stränge zueinander?",a:"Antiparallel (5'→3' und 3'→5')"},
+    {q:"Was ist ein Gen?",a:"Ein DNA-Abschnitt mit bestimmter Sequenz, der für ein Protein/eine RNA codiert"},
+    {q:"Welche 4 Eigenschaften muss die Erbsubstanz erfüllen?",a:"Kopierbar, veränderbar, stabil, ablesbar (Infos speichernd)"}
+  ]
+},
+{
+  id:"verpackung",
+  title:"Verpackung der DNA",
+  desc:"Chromosomen, Nukleosomen, Eu- vs. Prokaryoten",
+  tag:"Zellbiologie",
+  sections:[
+    {h:"Eukaryoten – Verdichtung der DNA",items:[
+      "DNA-Doppelstrang (Ø 2 nm) wird auf kugelförmige <b>Histone</b> aufgerollt → <b>Nukleosomen</b>.",
+      "Bei geringer Verdichtung kann die Information abgelesen werden.",
+      "Maximale Verdichtung im <b>Metaphase-Chromosom</b> (Ø 700 nm) → reine Transportform, nicht ablesbar.",
+      "Chromatiden = DNA + Proteine. Spiralisation, Schleifenbildung und Verdichtung führen vom dünnen Faden zum kompakten Chromosom."
+    ]},
+    {h:"Bau des Chromosoms",items:[
+      "Zwei <b>Schwesterchromatiden</b> sind am <b>Zentromer</b> verbunden.",
+      "Jedes Chromatid hat zwei <b>Chromosomenarme</b>.",
+      "Proteine (Histone) halten die DNA-Doppelhelix in Form."
+    ]},
+    {h:"Prokaryoten",items:[
+      "Besitzen ein großes, <b>ringförmiges</b> DNA-Molekül (kein Zellkern).",
+      "Zusätzlich oft kleine Ringe = <b>Plasmide</b>, z.B. für Antibiotika-Resistenzen."
+    ]}
+  ],
+  merksatz:"Merksatz: Je mehr verdichtet, desto weniger ablesbar – Metaphase-Chromosom = 'Transportkoffer' der DNA.",
+  videoQuery:"Chromosomen Aufbau Nukleosomen Histone Biologie",
+  cards:[
+    {q:"Worauf wird die DNA bei Eukaryoten aufgerollt?",a:"Auf kugelförmige Histone → Nukleosomen"},
+    {q:"Wann kann die DNA-Information abgelesen werden?",a:"Bei geringer Verdichtung (entspiralisiert)"},
+    {q:"Wofür ist das Metaphase-Chromosom die Form?",a:"Maximale Verdichtung – reine Transportform"},
+    {q:"Wo sind die Schwesterchromatiden verbunden?",a:"Am Zentromer"},
+    {q:"Wie liegt die DNA bei Prokaryoten vor?",a:"Als ein großes, ringförmiges DNA-Molekül, oft zusätzlich Plasmide"},
+    {q:"Was ist ein Plasmid?",a:"Ein kleiner DNA-Ring bei Prokaryoten, z.B. für Resistenzen"}
+  ]
+},
+{
+  id:"experimente",
+  title:"Historische Experimente",
+  desc:"Griffith, Avery, Hershey & Chase",
+  tag:"Forschungsgeschichte",
+  sections:[
+    {h:"Griffith (1928)",items:[
+      "Untersuchung zweier Stämme von Pneumokokken (Lungenentzündung-Erreger).",
+      "S-Stamm: glatte Oberfläche (Schleimkapsel), gefährlich/tödlich → infektiös.",
+      "R-Stamm: raue Oberfläche (keine Kapsel), harmlos → bekämpft vom Immunsystem.",
+      "Mix aus <b>abgetöteten S-Bakterien + lebenden R-Bakterien</b> → Maus stirbt!",
+      "Ergebnis: Es gab eine 'genetische Transformation' – tote S-Bakterien übertrugen Erbinformation auf lebende R-Bakterien ('transformierender Faktor')."
+    ]},
+    {h:"Avery (1944)",items:[
+      "Wollte herausfinden, was genau der 'transformierende Faktor' ist.",
+      "Gab gezielt Enzyme zu, die Proteine, RNA oder DNA abbauen.",
+      "Nur wenn die DNA zerstört wurde, blieb die Transformation aus.",
+      "Ergebnis: <b>DNA ist Träger der Erbinformation.</b>"
+    ]},
+    {h:"Hershey & Chase (1952)",items:[
+      "Bestätigten Averys Ergebnisse mithilfe von Bakteriophagen (Viren bestehen aus DNA + Proteinhülle).",
+      "Markierten radioaktiv: Schwefel (³⁵S, nur in Proteinen) und Phosphor (³²P, nur in DNA).",
+      "Ließen Viren Bakterien infizieren und trennten Hülle vom Inneren durch Zentrifugieren.",
+      "Nur das ³²P (DNA) gelangte in die Bakterienzellen → endgültiger Beweis: <b>DNA ist Erbmaterial.</b>"
+    ]}
+  ],
+  merksatz:"Reihenfolge: Griffith (Phänomen entdeckt) → Avery (DNA als Ursache identifiziert) → Hershey & Chase (endgültiger Beweis mit radioaktiver Markierung).",
+  videoQuery:"Griffith Avery Hershey Chase Experiment DNA Erbsubstanz",
+  cards:[
+    {q:"Was passierte bei Griffith, wenn er tote S- mit lebenden R-Bakterien mischte?",a:"Die Maus starb – lebende S-Bakterien traten auf ('transformierender Faktor')"},
+    {q:"Was zeigte das Avery-Experiment?",a:"Dass DNA (nicht Proteine/RNA) der Träger der Erbinformation ist"},
+    {q:"Wie markierten Hershey & Chase Proteine bzw. DNA?",a:"Proteine mit ³⁵S, DNA mit ³²P (radioaktiv)"},
+    {q:"Was zeigte das Ergebnis von Hershey & Chase?",a:"Nur die radioaktive DNA (³²P) gelangte in die Bakterien → DNA ist Erbmaterial"},
+    {q:"Wie nannte Griffith den unbekannten Faktor?",a:"Transformierender Faktor"}
+  ]
+},
+{
+  id:"replikation",
+  title:"Replikation",
+  desc:"Ablauf, Enzyme, Reparaturmechanismen",
+  tag:"Molekularbiologie",
+  sections:[
+    {h:"DNA-Replikation – Prinzip",items:[
+      "Prozess, bei dem die DNA vor der Zellteilung identisch verdoppelt wird, damit jede Tochterzelle eine vollständige Erbinformation erhält.",
+      "Läuft gleichzeitig an mehreren Stellen ('Replikationsblasen' / Replikationsursprünge) an den Chromosomen ab."
+    ]},
+    {h:"Enzyme & Ablauf",items:[
+      "<b>Topoisomerase</b>: entspiralisiert/entknotet die Doppelhelix, um Spannungen zu verhindern.",
+      "<b>Helicase</b>: trennt H-Brücken → Entstehung der Replikationsgabel.",
+      "<b>Einzelstrang-bindende Proteine</b>: verhindern, dass sich getrennte Strang-Bereiche sofort wieder zusammenlagern.",
+      "<b>RNA-Primase</b>: erzeugt RNA-Primer, da Polymerase nur an einen Primer anknüpfen kann.",
+      "<b>DNA-Polymerase</b>: knüpft neue komplementäre Nukleotide an das 3'-Ende des Primers (synthetisiert immer 5'→3').",
+      "<b>Ligase</b>: verknüpft Okazaki-Fragmente am Folgestrang."
+    ]},
+    {h:"Leit- vs. Folgestrang",items:[
+      "DNA-Stränge sind antiparallel → es entstehen zwei Synthese-Arten (Polymerase liest nur in eine Richtung).",
+      "<b>Leitstrang</b> (kontinuierlich): Polymerase läuft direkt in einem Zug, ohne Unterbrechung (neuer Strang 5'→3').",
+      "<b>Folgestrang</b> (diskontinuierlich): Polymerase muss immer wieder neue Primer setzen, sobald genug Einzelstrang freigegeben ist → entstehen in Richtung der Helicase = <b>Okazaki-Fragmente</b>."
+    ]},
+    {h:"Reparatur & Bedeutung",items:[
+      "DNA-Polymerase besitzt eine <b>Korrekturlese-Funktion</b> – erkennt falsch eingebaute Nukleotide und ersetzt sie.",
+      "<b>Mismatch-Reparatur</b>: spezielle Enzyme kontrollieren (vor weiteren Zellteilungen) die DNA noch einmal.",
+      "<b>Exzisionsreparatur</b>: wenn nur ein Teil von Molekülen betroffen ist.",
+      "Trotzdem können dauerhafte Fehler (Mutationen) zurückbleiben (ca. 1 zu 1.000.000.000)."
+    ]}
+  ],
+  merksatz:"Merksatz: 'Topo öffnet, Helicase trennt, Primase startet, Polymerase baut, Ligase klebt.'",
+  videoQuery:"DNA Replikation Ablauf Enzyme Leitstrang Folgestrang",
+  cards:[
+    {q:"Welches Enzym entspiralisiert die DNA?",a:"Topoisomerase"},
+    {q:"Welches Enzym trennt die Wasserstoffbrücken und öffnet die Doppelhelix?",a:"Helicase"},
+    {q:"Wofür wird die RNA-Primase benötigt?",a:"Sie setzt einen RNA-Primer, an den die DNA-Polymerase anknüpfen kann"},
+    {q:"In welche Richtung synthetisiert die DNA-Polymerase neue Stränge?",a:"Immer 5' → 3'"},
+    {q:"Was sind Okazaki-Fragmente?",a:"Kurze, diskontinuierlich synthetisierte Abschnitte am Folgestrang"},
+    {q:"Welches Enzym verknüpft die Okazaki-Fragmente?",a:"Ligase"},
+    {q:"Was macht die Korrekturlese-Funktion der Polymerase?",a:"Erkennt falsch eingebaute Nukleotide und ersetzt sie"}
+  ]
+},
+{
+  id:"meselson",
+  title:"Meselson-Stahl-Experiment",
+  desc:"Beweis der semikonservativen Replikation",
+  tag:"Forschungsgeschichte",
+  sections:[
+    {h:"Fragestellung",items:[
+      "Wie genau verdoppelt sich die DNA – nach welchem Mechanismus?",
+      "<b>Konservativ</b>: alte Doppelstrang bleibt komplett erhalten, es entsteht ein komplett neuer Strang.",
+      "<b>Semi-konservativ</b>: jeder neue Doppelstrang besteht aus einem alten und einem neuen Einzelstrang (Hypothese, die sich bestätigte).",
+      "<b>Dispersiv</b>: alte und neue Stücke sind zufällig im neuen Doppelstrang gemischt."
+    ]},
+    {h:"Versuchsaufbau",items:[
+      "Bakterien wachsen zunächst in Nährmedium mit schwerem Stickstoff-Isotop <sup>15</sup>N → wird in die DNA eingebaut.",
+      "Anschließend Medium-Wechsel auf normales <sup>14</sup>N → Zellteilung alle 20 min.",
+      "Proben sofort, nach 1 Verdopplung und nach 2 Verdopplungen entnommen, DNA isoliert und per <b>Dichtegradienten-Zentrifugation</b> getrennt."
+    ]},
+    {h:"Ergebnis",items:[
+      "Probe sofort: nur schwere (<sup>15</sup>N/<sup>15</sup>N)-DNA-Bande.",
+      "Probe nach 1. Verdopplung: eine mittelschwere Bande (<sup>14</sup>N/<sup>15</sup>N-DNA) → Hybrid! widerlegt 'konservativ'.",
+      "Probe nach 2. Verdopplung: leichte (<sup>14</sup>N/<sup>14</sup>N) und mittelschwere Bande, aber <b>keine</b> rein schwere Bande mehr → widerlegt 'dispersiv'.",
+      "Ergebnis: Das <b>semikonservative Modell</b> der Replikation wird bewiesen."
+    ]}
+  ],
+  merksatz:"Merksatz: Eine Hybrid-Bande nach Runde 1 killt 'konservativ'; keine reine schwere Bande nach Runde 2 killt 'dispersiv' → es bleibt nur semikonservativ.",
+  videoQuery:"Meselson Stahl Experiment semikonservative Replikation",
+  cards:[
+    {q:"Welche 3 Hypothesen wurden zur Replikation getestet?",a:"Konservativ, semi-konservativ, dispersiv"},
+    {q:"Mit welchem Isotop wurden die Bakterien zuerst markiert?",a:"Schwerem Stickstoff ¹⁵N"},
+    {q:"Wie wurde die DNA nach Dichte getrennt?",a:"Durch Dichtegradienten-Zentrifugation"},
+    {q:"Was zeigte die mittelschwere Bande nach der 1. Verdopplung?",a:"Dass jeder neue Doppelstrang aus einem alten + einem neuen Strang besteht (widerlegt konservativ)"},
+    {q:"Warum wird die dispersive Hypothese widerlegt?",a:"Weil nach 2 Verdopplungen keine rein schwere DNA-Bande mehr existiert, sondern klar getrennte leichte/mittelschwere Banden"},
+    {q:"Welches Modell wurde letztlich bewiesen?",a:"Das semikonservative Modell der Replikation"}
+  ]
+},
+{
+  id:"transkription",
+  title:"Transkription",
+  desc:"Vom Gen zur mRNA, genetischer Code",
+  tag:"Proteinbiosynthese",
+  sections:[
+    {h:"Ablauf der Transkription",items:[
+      "Herstellung einer transportfähigen Kopie eines Gens in Form von mRNA (bei Eukaryoten im Zellkern).",
+      "<b>Initiation</b>: RNA-Polymerase bindet an spezifische Startsequenz der DNA (Promotor).",
+      "<b>Elongation</b>: DNA wird entwunden, RNA-Polymerase liest codogenen Strang (3'→5') ab, komplementäre RNA-Nukleotide lagern sich an, die Polymerase verbindet sie zur mRNA-Einzelstrang (5'→3').",
+      "<b>Termination</b>: beim Erreichen einer Stoppsequenz (Terminator) löst sich die Polymerase, fertige mRNA wird freigesetzt."
+    ]},
+    {h:"Wichtige Begriffe",items:[
+      "<b>Codogener Strang</b>: der DNA-Strang, der die benötigte Information enthält und abgelesen wird.",
+      "<b>Unterschied zur DNA</b>: mRNA ist einzelsträngig, enthält Uracil statt Thymin."
+    ]},
+    {h:"Der genetische Code",items:[
+      "Universell und kommafrei – die 'Übersetzungsvorschrift' von der Basensequenz der mRNA in die Aminosäuresequenz eines Proteins.",
+      "Je 3 Basen (<b>Codon</b>/Triplett) codieren für eine Aminosäure (4³ = 64 Tripletts für nur 20 AS → mehrere Tripletts können dieselbe AS codieren = degeneriert).",
+      "Start-Codon ist immer <b>AUG</b>; Stopp-Codons: <b>UAA, UAG, UGA</b>."
+    ]}
+  ],
+  merksatz:"Merksatz: 64 Codons, 20 Aminosäuren → der Code ist degeneriert, aber eindeutig (jedes Codon codiert immer für genau eine AS).",
+  videoQuery:"Transkription Ablauf genetischer Code Codon Biologie",
+  cards:[
+    {q:"Was passiert bei der Transkription grundsätzlich?",a:"Eine Kopie eines Gens wird in Form von mRNA hergestellt"},
+    {q:"Wo bindet die RNA-Polymerase, um die Transkription zu starten?",a:"An eine spezifische Startsequenz, den Promotor"},
+    {q:"Wann endet die Transkription?",a:"Beim Erreichen einer Stoppsequenz (Terminator)"},
+    {q:"Was ist der codogene Strang?",a:"Der DNA-Strang, der abgelesen wird und die benötigte Information enthält"},
+    {q:"Wie viele Basen bilden ein Codon?",a:"3 Basen (Triplett)"},
+    {q:"Was bedeutet 'der genetische Code ist degeneriert'?",a:"Mehrere Codons können für dieselbe Aminosäure codieren"},
+    {q:"Welches Codon ist das Start-Codon?",a:"AUG"},
+    {q:"Welche Codons sind Stopp-Codons?",a:"UAA, UAG, UGA"}
+  ]
+},
+{
+  id:"translation",
+  title:"Translation",
+  desc:"Initiation, Elongation, Termination am Ribosom",
+  tag:"Proteinbiosynthese",
+  sections:[
+    {h:"Grundprinzip",items:[
+      "Übersetzung der mRNA-Information in eine Aminosäuresequenz – findet an Ribosomen im Zellplasma statt.",
+      "Beteiligt: mRNA, Ribosom (kleine & große Untereinheit), <b>tRNA</b> – besitzt ein Anticodon, das komplementär zum mRNA-Codon bindet und die passende Aminosäure trägt."
+    ]},
+    {h:"Initiation",items:[
+      "Kleine Untereinheit lagert sich an das Start-Codon AUG an.",
+      "Start-tRNA bindet mit ihrem Anticodon an AUG, danach lagert sich die große Untereinheit an."
+    ]},
+    {h:"Elongation",items:[
+      "Das Ribosom wandert in 5'→3'-Richtung am mRNA-Strang entlang.",
+      "P-Stelle (Peptidyl) und A-Stelle (Aminoacyl) werden abwechselnd von tRNAs besetzt → Aminosäuren werden durch eine <b>Peptidbindung</b> verknüpft."
+    ]},
+    {h:"Termination",items:[
+      "Läuft, bis ein Stoppcodon erreicht wird.",
+      "Ein Release-Faktor (RF) besetzt die A-Stelle → Translation wird abgebrochen.",
+      "RF spaltet das fertige Polypeptid ab."
+    ]},
+    {h:"Biosyntheseketten/Genwirkketten",items:[
+      "Abfolge von hintereinandergeschalteten Stoffwechselreaktionen, bei denen jeweils ein Genprodukt (Enzym) den nächsten Schritt katalysiert."
+    ]}
+  ],
+  merksatz:"Merksatz: tRNA = Übersetzer – Anticodon passt zum Codon, die Aminosäure hängt am anderen Ende der tRNA.",
+  videoQuery:"Translation Proteinbiosynthese Ribosom tRNA Ablauf",
+  cards:[
+    {q:"Wo findet die Translation statt?",a:"An Ribosomen im Zellplasma"},
+    {q:"Was trägt die tRNA und wofür sorgt ihr Anticodon?",a:"Sie trägt eine Aminosäure; das Anticodon bindet komplementär an das mRNA-Codon"},
+    {q:"Was passiert bei der Initiation der Translation?",a:"Kleine Untereinheit lagert an AUG an, Start-tRNA bindet, große Untereinheit kommt hinzu"},
+    {q:"Wie wird das Polypeptid bei der Elongation verlängert?",a:"Aminosäuren an P- und A-Stelle werden über Peptidbindungen verknüpft"},
+    {q:"Was löst die Termination der Translation aus?",a:"Ein Stoppcodon wird erreicht, ein Release-Faktor besetzt die A-Stelle"},
+    {q:"Was ist eine Genwirkkette?",a:"Eine Abfolge hintereinandergeschalteter, enzymgesteuerter Stoffwechselreaktionen"}
+  ]
+},
+{
+  id:"mutationen",
+  title:"Mutationen & Meiose",
+  desc:"Mutationsarten, Ursachen, Keimbahn, Reifeteilung",
+  tag:"Vererbung",
+  sections:[
+    {h:"Mutationsarten",items:[
+      "Mutation = Veränderung der genetischen Information.",
+      "<b>Genommutation</b>: Veränderung der Chromosomenanzahl.",
+      "<b>Chromosomenmutation</b>: Veränderung der Chromosomenstruktur.",
+      "<b>Genmutation</b>: veränderte Basensequenz einzelner Gene – Substitution (Austausch), Insertion (Einbau), Deletion (Herausnahme einer Base)."
+    ]},
+    {h:"Auswirkungen von Genmutationen",items:[
+      "<b>Stumm</b>: trotz Basenaustausch kommt dieselbe Aminosäure heraus → Protein unverändert/funktionstüchtig.",
+      "<b>Missense</b>: andere Aminosäure wird eingebaut → Funktion des Proteins leicht oder schwerwiegend beeinträchtigt.",
+      "<b>Nonsense</b>: Triplett wird zum Stoppcodon umgewandelt → Translation abgebrochen, verkürztes/funktionsloses Protein.",
+      "Insertion/Deletion können einen <b>Raster­schub (Frameshift)</b> auslösen → alle nachfolgenden Codons verschieben sich."
+    ]},
+    {h:"Ort & Vererbung von Mutationen",items:[
+      "<b>Somatische Mutationen</b>: betreffen Körperzellen, werden nicht weitervererbt, können aber z.B. Krebs/Motor der Evolution begünstigen.",
+      "<b>Keimbahnmutationen</b>: betreffen Eizellen/Spermien, werden vererbt, sind für Erbkrankheiten verantwortlich.",
+      "Ursachen: UV-Strahlung, Röntgenstrahlung, Gifte (Zigaretten, Chemikalien)."
+    ]},
+    {h:"Meiose / Reifeteilung",items:[
+      "Entwicklungslinie der Zellen von befruchteter Eizelle bis zu den Keimzellen.",
+      "Nur Keimzellen geben genetisches Material an die Nachkommen weiter.",
+      "Aus Urkeimzellen (diploid, 2n) entstehen durch Reifeteilung haploide Keimzellen (n) → reduzierter Chromosomensatz für die nächste Generation.",
+      "Vielfalt durch zufällige Verteilung der mütterlichen & väterlichen Chromosomen sowie durch Crossing-Over."
+    ]}
+  ],
+  merksatz:"Merksatz: stumm = kein Schaden, Missense = AS-Tausch, Nonsense = zu früher Stopp, Frameshift = alles verschoben.",
+  videoQuery:"Genmutation Arten stumm missense nonsense Frameshift Meiose",
+  cards:[
+    {q:"Was ist eine Genommutation?",a:"Veränderung der Chromosomenanzahl"},
+    {q:"Was ist eine Chromosomenmutation?",a:"Veränderung der Chromosomenstruktur"},
+    {q:"Was passiert bei einer stummen Mutation?",a:"Trotz Basenaustausch entsteht dieselbe Aminosäure – Protein bleibt funktionstüchtig"},
+    {q:"Was ist eine Nonsense-Mutation?",a:"Ein Triplett wird zum Stoppcodon → Translation bricht ab, Protein wird verkürzt/funktionslos"},
+    {q:"Was verursachen Insertionen/Deletionen häufig?",a:"Einen Rasterschub (Frameshift) – alle folgenden Codons verschieben sich"},
+    {q:"Was ist der Unterschied zwischen somatischen Mutationen und Keimbahnmutationen?",a:"Somatische betreffen Körperzellen (nicht vererbt), Keimbahnmutationen betreffen Keimzellen (werden vererbt)"},
+    {q:"Was entsteht durch die Meiose aus diploiden Urkeimzellen?",a:"Haploide Keimzellen (n) mit reduziertem Chromosomensatz"},
+    {q:"Wodurch entsteht genetische Vielfalt in der Meiose?",a:"Zufällige Verteilung der Chromosomen + Crossing-Over"}
+  ]
+},
+{
+  id:"genexpression",
+  title:"Genexpression",
+  desc:"Regulation bei Pro- und Eukaryoten im Vergleich",
+  tag:"Proteinbiosynthese",
+  sections:[
+    {h:"Prokaryoten vs. Eukaryoten",items:[
+      "<b>Genaufbau</b>: Prokaryoten enthalten nur codierende Sequenzen; Eukaryoten haben Mosaikgene aus codierenden Exons und nicht-codierenden Introns.",
+      "<b>Räumliche Organisation</b>: bei Prokaryoten findet alles im Cytoplasma statt; bei Eukaryoten ist es kompartimentiert (Transkription im Kern, Translation im Cytoplasma).",
+      "<b>Zeitliche Organisation</b>: bei Prokaryoten laufen Transkription und Translation gleichzeitig; bei Eukaryoten zeitlich getrennt.",
+      "<b>Reifung der mRNA</b>: bei Prokaryoten keine, mRNA wird direkt übersetzt; bei Eukaryoten RNA-Prozessierung nötig (Spleißen der Introns raus, Capping und Poly-A-Schwanz).",
+      "<b>DNA-Aufbau</b>: bei Prokaryoten meist ringförmig, frei im Cytoplasma; bei Eukaryoten linear, im Zellkern um Histone gewickelt (Chromatin).",
+      "<b>Ribosomen</b>: 70S bei Prokaryoten, 80S bei Eukaryoten."
+    ]},
+    {h:"Genregulation",items:[
+      "Über Genregulation steuert die Zelle, welche Gene wann und wie stark abgelesen (exprimiert) werden.",
+      "Bei Prokaryoten z.B. über Operon-Systeme (Promotor/Operator), die je nach Bedarf (z.B. Nährstoffangebot) An- oder Abschalten von Genen ermöglichen."
+    ]}
+  ],
+  merksatz:"Merksatz: Eukaryoten = 'getrennt & verpackt' (Kern/Cytoplasma, Introns raus); Prokaryoten = 'alles gleichzeitig, direkt'.",
+  videoQuery:"Genregulation Prokaryoten Eukaryoten Unterschied Genexpression",
+  cards:[
+    {q:"Was ist der Unterschied im Genaufbau zwischen Pro- und Eukaryoten?",a:"Prokaryoten: nur codierende Sequenzen. Eukaryoten: Exons (codierend) + Introns (nicht-codierend)"},
+    {q:"Wo finden Transkription und Translation bei Eukaryoten statt?",a:"Transkription im Zellkern, Translation im Cytoplasma (räumlich getrennt)"},
+    {q:"Warum braucht eukaryotische mRNA eine RNA-Prozessierung?",a:"Introns müssen herausgespleißt werden, außerdem Capping und Poly-A-Schwanz nötig"},
+    {q:"Welche Ribosomen-Typen gibt es bei Pro- bzw. Eukaryoten?",a:"70S bei Prokaryoten, 80S bei Eukaryoten"},
+    {q:"Wozu dient die Genregulation?",a:"Damit die Zelle steuert, welche Gene wann und wie stark exprimiert werden"}
+  ]
+}
+];
+
+// ---------- State / Storage ----------
+const STORAGE_KEY = "biolearn_progress_v1";
+function loadProgress(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }catch(e){ return {}; }
+}
+function saveProgress(p){ localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
+let progress = loadProgress();
+
+function masteryFor(topicId){
+  const total = TOPICS.find(t=>t.id===topicId).cards.length;
+  const known = (progress[topicId]?.known) || [];
+  return Math.round((known.length/total)*100);
+}
+function overallProgress(){
+  let totalCards=0, totalKnown=0;
+  TOPICS.forEach(t=>{
+    totalCards += t.cards.length;
+    totalKnown += (progress[t.id]?.known||[]).length;
+  });
+  return Math.round((totalKnown/totalCards)*100);
+}
+
+const app = document.getElementById("app");
+
+function renderHome(){
+  const op = overallProgress();
+  app.innerHTML = `
+    <div class="progressbar"><div style="width:${op}%"></div></div>
+    <p style="color:var(--muted);margin:-14px 0 14px;font-size:.8rem;">Gesamtfortschritt: ${op}%</p>
+    <div class="grid">
+      ${TOPICS.map((t,i)=>`
+        <div class="topic-card" onclick="openTopic('${t.id}')">
+          <div class="num">THEMA ${String(i+1).padStart(2,'0')}</div>
+          <h3>${t.title}</h3>
+          <p>${t.desc}</p>
+          <span class="tag">${t.tag}</span>
+          <div class="mastery"><div style="width:${masteryFor(t.id)}%"></div></div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function openTopic(id, tab){
+  const t = TOPICS.find(x=>x.id===id);
+  tab = tab || "notes";
+  app.innerHTML = `
+    <button class="btn btn-ghost backbtn" onclick="renderHome()">← Übersicht</button>
+    <h2 style="margin:0 0 4px;">${t.title}</h2>
+    <p style="color:var(--muted);margin:0 0 10px;">${t.desc}</p>
+    <div class="tabs">
+      <button data-tab="notes" class="${tab==='notes'?'active':''}" onclick="openTopic('${id}','notes')">📘 Zusammenfassung</button>
+      <button data-tab="video" class="${tab==='video'?'active':''}" onclick="openTopic('${id}','video')">🎬 Lernvideo</button>
+      <button data-tab="quiz" class="${tab==='quiz'?'active':''}" onclick="openTopic('${id}','quiz')">🧠 Karteikarten</button>
+    </div>
+    <div id="topic-panel"></div>
+  `;
+  const panel = document.getElementById("topic-panel");
+  if(tab==="notes") panel.innerHTML = renderNotes(t);
+  if(tab==="video") panel.innerHTML = renderVideo(t);
+  if(tab==="quiz") renderQuiz(t, panel);
+}
+
+function renderNotes(t){
+  return t.sections.map(s=>`
+    <div class="note-section">
+      <h4>${s.h}</h4>
+      <ul>${s.items.map(i=>`<li>${i}</li>`).join("")}</ul>
+    </div>
+  `).join("") + (t.merksatz? `<div class="merksatz">💡 ${t.merksatz}</div>` : "");
+}
+
+function renderVideo(t){
+  const url = "https://www.youtube.com/results?search_query=" + encodeURIComponent(t.videoQuery);
+  return `
+    <div class="video-box">
+      <div class="yticon">🎥</div>
+      <h3>Kurzes Lernvideo zu „${t.title}“</h3>
+      <p style="color:var(--muted);max-width:420px;margin:8px auto 18px;">
+        Öffnet eine YouTube-Suche mit passenden Erklärvideos (z.B. von musstewissen Biologie) zu diesem Thema.
+      </p>
+      <a href="${url}" target="_blank" rel="noopener"><button class="btn btn-primary">▶ Video suchen & ansehen</button></a>
+    </div>
+  `;
+}
+
+// ---------- Quiz / Anki-style flashcards ----------
+function renderQuiz(t, panel){
+  const known = new Set((progress[t.id]?.known)||[]);
+  let queue = t.cards.map((c,i)=>i).filter(i=>!known.has(i));
+  if(queue.length===0) queue = t.cards.map((c,i)=>i); // alle wiederholen wenn schon alles gewusst
+  queue = shuffle(queue);
+  let idx = 0, flipped = false;
+
+  function draw(){
+    if(idx >= queue.length){
+      panel.innerHTML = `
+        <div class="done-screen">
+          <div class="big">🎉</div>
+          <h3>Runde abgeschlossen!</h3>
+          <p style="color:var(--muted)">Gewusst: ${(progress[t.id]?.known||[]).length} / ${t.cards.length} Karten</p>
+          <button class="btn btn-primary" onclick="openTopic('${t.id}','quiz')">🔁 Nochmal</button>
+        </div>`;
+      return;
+    }
+    const cardIdx = queue[idx];
+    const c = t.cards[cardIdx];
+    panel.innerHTML = `
+      <div class="flash-wrap">
+        <p class="flash-meta">Karte ${idx+1} / ${queue.length}</p>
+        <div class="flashcard" id="fc">
+          <span class="label">${flipped? 'ANTWORT' : 'FRAGE'}</span>
+          <div>${flipped? c.a : c.q}</div>
+        </div>
+        <div class="flash-actions">
+          ${!flipped
+            ? `<button class="btn btn-primary" id="flipbtn">Karte umdrehen</button>`
+            : `<button class="btn btn-red" id="wrongbtn">❌ Wusste ich nicht</button>
+               <button class="btn btn-green" id="rightbtn">✅ Wusste ich</button>`
+          }
+        </div>
+      </div>
+    `;
+    document.getElementById("fc").onclick = ()=>{ flipped=!flipped; draw(); };
+    if(!flipped){
+      document.getElementById("flipbtn").onclick = (e)=>{ e.stopPropagation(); flipped=true; draw(); };
+    } else {
+      document.getElementById("rightbtn").onclick = (e)=>{
+        e.stopPropagation();
+        markCard(t.id, cardIdx, true);
+        idx++; flipped=false; draw();
+      };
+      document.getElementById("wrongbtn").onclick = (e)=>{
+        e.stopPropagation();
+        markCard(t.id, cardIdx, false);
+        idx++; flipped=false; draw();
+      };
+    }
+  }
+  draw();
+}
+
+function markCard(topicId, cardIdx, knewIt){
+  if(!progress[topicId]) progress[topicId] = {known:[]};
+  const known = new Set(progress[topicId].known);
+  if(knewIt) known.add(cardIdx); else known.delete(cardIdx);
+  progress[topicId].known = Array.from(known);
+  saveProgress(progress);
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+renderHome();
+</script>
+</body>
+</html>
